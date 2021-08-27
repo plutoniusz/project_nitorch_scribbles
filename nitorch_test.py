@@ -1,45 +1,54 @@
+from numpy.core.numeric import False_
 import nitorch
 from nitorch.tools import qmri
 import os
 import wget
 import zipfile
-# import torch
 
-# URL to MRIs
-url = 'https://owncloud.gwdg.de/index.php/s/iv2TOQwGy4FGDDZ/download?path=%2F&files=hmri_sample_dataset.zip'
+# # URL to MRIs
+# print("starting")
+# url = 'https://owncloud.gwdg.de/index.php/s/iv2TOQwGy4FGDDZ/download?path=%2F&files=hmri_sample_dataset.zip'
 
 # Path to downloaded zip-file
+print("getting paths")
 cwd = os.getcwd()
 pth_zip = os.path.join(cwd, 'hmri_sample_dataset.zip')
 pth_mris = [os.path.join(cwd, 'MPM/mtw_mfc_3dflash_v1i_R4_0012'),
             os.path.join(cwd, 'MPM/pdw_mfc_3dflash_v1i_R4_0009'),
             os.path.join(cwd, 'MPM/t1w_mfc_3dflash_v1i_R4_0015')]
 
-# Download file
-if not os.path.exists(pth_zip):
-    print('Downloading images...', end='')
-    wget.download(url, pth_zip)
-    print('done!')
+# # Path to downloaded zip-file
+# print("getting paths")
+# cwd = os.getcwd()
+# #pth_zip = os.path.join(cwd, 'hmri_sample_dataset.zip')
+# pth_mris = [os.path.join(cwd, 'slices/mtw_mfc_3dflash_v1i_R4_0012'),
+#             os.path.join(cwd, 'slices/pdw_mfc_3dflash_v1i_R4_0009'),
+#             os.path.join(cwd, 'slices/t1w_mfc_3dflash_v1i_R4_0015')]
 
-# Unzip file
-if not all([os.path.exists(p) for p in pth_mris]):
-    with zipfile.ZipFile(pth_zip, 'r') as zip_ref:
-        zip_ref.extractall(cwd)
+# # Download file
+# if not os.path.exists(pth_zip):
+#     print('Downloading images...', end='')
+#     wget.download(url, pth_zip)
+#     print('done!')
+
+# # Unzip file
+# print("unzipping files")
+# if not all([os.path.exists(p) for p in pth_mris]):
+#     with zipfile.ZipFile(pth_zip, 'r') as zip_ref:
+#         zip_ref.extractall(cwd)
 
 
-
-
-
-fmtw = [];
+fmtw = []
+print("preparing lists")
 for filename in os.listdir(str(pth_mris[0])):
     if filename.endswith(".nii"):
-        #print(os.path.join(pth_mris[0], filename))
+        # print(os.path.join(pth_mris[0], filename))
         fmtw.append(str(os.path.join(pth_mris[0], filename)))
     else:
         continue
 #print(fmtw)
 
-fpdw = [];
+fpdw = []
 for filename in os.listdir(str(pth_mris[1])):
     if filename.endswith(".nii"):
         #print(os.path.join(pth_mris[1], filename))
@@ -48,7 +57,7 @@ for filename in os.listdir(str(pth_mris[1])):
         continue
 #print(fpdw)
 
-ft1w = [];
+ft1w = []
 for filename in os.listdir(str(pth_mris[2])):
     if filename.endswith(".nii"):
         #print(os.path.join(pth_mris[2], filename))
@@ -102,13 +111,25 @@ mtw.mt = True
 # 3) Prepare the options
 
 opt = qmri.GREEQOptions()
-opt.preproc.register = False # we assume everything is already registered
+opt.preproc.register = True # we assume everything is already registered
 opt.backend.device = 'cuda' #'cuda'  # to run on gpu. Otherwise ‘cpu’
 opt.recon.space = 0          # reconstruct in PDw space. By default it generates a mean space but I haven’t tested it in a while so safer to use this for now.
 
-# opt.penalty.factor = dict(pd=5, r1=5, mt=5, r2s=0.5) # to override default reg. Default is 10 everywhere. 
+opt.penalty.factor = dict(pd=5, r1=5, mt=5, r2s=0.5) # to override default reg. Default is 10 everywhere. 
 
 # torch.cuda.empty_cache()
 # 4) run the code
 
+import timeit
+start = timeit.timeit()
+("calling greeq function")
 pd, r1, r2s, mt = qmri.greeq([pdw, t1w, mtw], transmit=None, receive=None, opt=opt) #transmit=b1p, receive=b1m, opt=opt)
+end = timeit.timeit()
+print(f"time: {end - start}")
+
+# 5) write results
+
+nitorch.io.savef(pd.volume, os.path.join(cwd, 'chi_results/pd.nii'), affine=pd.affine)
+nitorch.io.savef(r1.volume, os.path.join(cwd, 'chi_results/r1.nii'), affine=r1.affine)
+nitorch.io.savef(r2s.volume, os.path.join(cwd, 'chi_results/r2s.nii'), affine=r2s.affine)
+nitorch.io.savef(mt.volume, os.path.join(cwd, 'chi_results/mt.nii'), affine=mt.affine)
