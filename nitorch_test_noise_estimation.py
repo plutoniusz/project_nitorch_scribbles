@@ -18,5 +18,5 @@ t1w = qio.GradientEchoMulti.from_fnames(t1w)
 
 for e in t1w:
     print("NEW ECHO")
-    sd_noise, _, mu_noise, _= estimate_noise(e.fdata())
-    print(f"sd_noise {sd_noise}, mu_noise: {mu_noise}")  # 17.9737
+    sd_noise, _, mu_noise, _= estimate_noise(e.fdata(), chi=True)
+    print(f"vr_noise: {sd_noise**2}, sd_noise: {sd_noise}, mu_noise: {mu_noise}")  # 17.9737
