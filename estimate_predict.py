@@ -98,23 +98,22 @@ for echo in echos:
         r2sp = ParameterMap(r2sp)
     if not isinstance(mtp, ParameterMap):
         mtp = ParameterMap(mtp)
-        mtp.unit = '%'
 
     # calculating the predicted echo with gre for three contrasts mtw, pdw, t1w
     mtwl = qio.GradientEchoSingle(mtwl)
     print(mtwl.te, mtwl.tr, mtwl.fa, mtw.noise, mtw.dof)
-    flash = gre(pdp, r1p, r2sp,  mtp,  transmit=transmit, receive=receive[2], te=mtwl.te, tr=mtwl.tr, fa=mtwl.fa, mtpulse=True, affine=mtw.affine, shape=pdp.shape)
+    flash = gre(pdp, r1p, r2sp,  mtp,  transmit=transmit, receive=receive[2], te=mtwl.te, tr=mtwl.tr, fa=mtwl.fa, mtpulse=True, affine=mtwl.affine, shape=mtwl.shape)
     text = save_folder+'/flash_mtw'+str(echo)+'.nii'
     savef(flash.volume, os.path.join(cwd, text), affine=flash.affine)
 
     pdwl = qio.GradientEchoSingle(pdwl)
     print(pdwl.te, mtwl.tr, pdwl.fa, pdw.noise, pdw.dof)
-    flash = gre(pdp, r1p, r2sp,  mtp,  transmit=transmit, receive=receive[0], te=pdwl.te, tr=pdwl.tr, fa=pdwl.fa, mtpulse=False, affine=pdp.affine, shape=pdp.shape)
+    flash = gre(pdp, r1p, r2sp,  mtp,  transmit=transmit, receive=receive[0], te=pdwl.te, tr=pdwl.tr, fa=pdwl.fa, mtpulse=False, affine=pdwl.affine, shape=pdwl.shape)
     text = save_folder+'/flash_pdw'+str(echo)+'.nii'
     savef(flash.volume, os.path.join(cwd, text), affine=flash.affine)
 
     t1wl = qio.GradientEchoSingle(t1wl)
     print(t1wl.te, t1wl.tr, t1wl.fa, t1w.noise, t1w.dof)
-    flash = gre(pdp, r1p, r2sp,  mtp,  transmit=transmit, receive=receive[2], te=t1wl.te, tr=t1wl.tr, fa=t1wl.fa, mtpulse=False, affine=r1p.affine, shape=pdp.shape)
+    flash = gre(pdp, r1p, r2sp,  mtp,  transmit=transmit, receive=receive[2], te=t1wl.te, tr=t1wl.tr, fa=t1wl.fa, mtpulse=False, affine=t1wl.affine, shape=t1wl.shape)
     text = save_folder+'/flash_t1w'+str(echo)+'.nii'
     savef(flash.volume, os.path.join(cwd, text), affine=flash.affine)
