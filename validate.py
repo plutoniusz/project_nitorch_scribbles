@@ -1,47 +1,61 @@
+from math import log
 import os
 from nitorch.io import savef
 import nitorch.tools.qmri.io as qio
 import torch
-from nitorch.tools.qmri.param import ParameterMap
-from nitorch.core.math import besseli_ratio, besseli
+from nitorch.core.math import besseli
+from nitorch.core.constants import pi
 
-def chi_ll(dat, pred, dof, std, chi=True):
-    #std = std.sqrt()
-    if chi:
+def chi_ll(dat, pred, dof, std, model='chi'):
+    """
+    Calculate the log lokelihood of the observation given predicted echo
+
+    """
+    var = std**std
+    rec_var = 1/var
+    if model == 'chi':
         msk = torch.isfinite(pred) & torch.isfinite(dat) & (dat > 0) & (pred > 0)
         tiny = torch.tensor(1e-32)
         dat[~msk] = 0
         pred[~msk] = 0
-    else:
+    elif model == 'rice':
+        msk = torch.isfinite(pred) & torch.isfinite(dat) & (dat > 0) & (pred > 0)
+        dat[~msk] = 0
+        pred[~msk] = 0
+    else :
+        # gaussian log-likelihood
         msk = torch.isfinite(pred) & torch.isfinite(dat) & (dat > 0) 
         dat[~msk] = 0
         pred[~msk] = 0
 
-
-    if chi:
-        z = (dat[msk]*pred[msk]*std).clamp_min_(tiny)
-        critn = ((dof/2.-1.) * pred[msk].log()
-                - (dof/2.) * dat[msk].log()
-                + 0.5 * std * (pred[msk].square() + dat[msk].square())
-                - besseli(dof/2.-1., z, 'log'))
-        crit = torch.sum(critn, dtype=torch.double)
-
-        z = besseli_ratio(dof/2.-1., z, N=2, K=4)
-        res = torch.zeros(dat.shape) # unsure
-        res[msk] = z.mul_(dat[msk]).neg_().add_(pred[msk])     
-        del z       
-    else:
+    if model == 'chi':
+        z = (dat[msk]*pred[msk]*rec_var).clamp_min_(tiny)
+        ll = ((1.-dof/2.) * pred[msk].log()
+                + (dof/2.) * dat[msk].log()
+                - 0.5 * rec_var * (pred[msk].square() + dat[msk].square())
+                + besseli(dof/2.-1., z, 'log')
+                - log(var))
+        print(ll.size())
+        ll = torch.sum(ll, dtype=torch.double) 
+    elif model =='rice':
+        ll = (dat[msk] + tiny).log() - var.log() - (dat.square() + pred.square()) / (2 * var)
+        ll = ll + besseli(0, dat * (pred/ var), 'log')
+        ll = torch.sum(ll, dtype=torch.double)
+    else :
         # gaussian log-likelihood
         res = dat.neg_().add_(pred)
-        crit = 0.5 * dof * res.square().sum(dtype=torch.double)
-    
-    return crit
+        ll = - (0.5 * dof * res.square().sum(dtype=torch.double)
+            - 0.5*log(2.*pi*var))
+    return ll
 
 cwd = os.getcwd()
-save_folder = 'chi_results_leftout'
+# parameter estimation model
+model = 'chi'
+save_folder = model + '_results_leftout'
 
 # read predicted image
-pth_pred = os.path.join(cwd, save_folder)
+predicted = 'predicted'
+pth_pred = os.path.join(cwd, save_folder, predicted)
 mtw_pred = []
 pdw_pred = []
 t1w_pred = []
@@ -79,17 +93,12 @@ for filename in os.listdir(str(pth_mris[2])):
         continue
 
 # read the brain mask
-pth_mask = os.path.join(cwd, save_folder)
-mtw_masks = []
-pdw_masks = []
-t1w_masks = []
+mask_folder = 'mask'
+pth_mask = os.path.join(cwd, save_folder, mask_folder)
+masks = []
 for filename in os.listdir(str(pth_mask)):
-    if filename.endswith("mask.nii") and filename.startswith("mtw"):
-        mtw_masks.append(str(os.path.join(pth_mask, filename)))
-    elif filename.endswith("mask.nii") and filename.startswith("pdw"):
-        pdw_masks.append(str(os.path.join(pth_mask, filename)))
-    elif filename.endswith("mask.nii") and filename.startswith("t1w"):
-        t1w_masks.append(str(os.path.join(pth_mask, filename)))
+    if filename.endswith("mask.nii"):
+        masks.append(str(os.path.join(pth_mask, filename)))
     else:
         continue
 
@@ -108,35 +117,45 @@ for echo in echos:
     t1wo = qio.GradientEchoMulti(ft1w[echo])
 
     # read the brain mask
-    mtwm = qio.GradientEchoSingle(mtw_masks[echo])
-    pdwm = qio.GradientEchoSingle(pdw_masks[echo])
-    t1wm = qio.GradientEchoSingle(t1w_masks[echo])
+    brain_mask = qio.GradientEchoSingle(masks[echo])
+    brain_mask_affine =brain_mask.affine
+    brain_mask = brain_mask.fdata()
+    msk = torch.isfinite(brain_mask)
+    brain_mask[~msk] = 0.
 
     # multiply mask by predicted image
-    mtwp = mtwp.fdata()*mtwm.fdata()
-    pdwp = pdwp.fdata()*pdwm.fdata()
-    t1wp = t1wp.fdata()*t1wm.fdata()
+    mtwpm = mtwp.fdata()*brain_mask
+    pdwpm = pdwp.fdata()*brain_mask
+    t1wpm = t1wp.fdata()*brain_mask
+
+    # not needed really
+    savef(mtwpm, os.path.join(cwd, save_folder+'/masked/mtwp'+str(echo)+'.nii'), affine = mtwp.affine)
+    savef(pdwpm, os.path.join(cwd, save_folder+'/masked/pdwp'+str(echo)+'.nii'), affine = pdwp.affine)
+    savef(t1wpm, os.path.join(cwd, save_folder+'/masked/t1wp'+str(echo)+'.nii'), affine = t1wp.affine)
 
     # multiply mask by observed image
-    mtwo = mtwo.fdata()*mtwm.fdata()
-    pdwo = pdwo.fdata()*pdwm.fdata()
-    t1wo = t1wo.fdata()*t1wm.fdata()
+    mtwom = mtwo.fdata()*brain_mask
+    pdwom = pdwo.fdata()*brain_mask
+    t1wom = t1wo.fdata()*brain_mask
 
-    print(mtwm.fdata())
-    print(pdwm.fdata())
-    print(t1wm.fdata())
+    # also not needed
+    savef(mtwom, os.path.join(cwd, save_folder+'/masked/mtwo'+str(echo)+'.nii'), affine = mtwo.affine)
+    savef(pdwom, os.path.join(cwd, save_folder+'/masked/pdwo'+str(echo)+'.nii'), affine = pdwo.affine)
+    savef(t1wom, os.path.join(cwd, save_folder+'/masked/t1wo'+str(echo)+'.nii'), affine = t1wo.affine)
 
     # read noise parameters
-    dof = [11, 12, 14]
-    std = [20, 17, 36]
-    print(std)
-    print(dof)
+    # dof = [11, 12, 14]
+    # std = [20, 17, 36]
 
+    # echo 5
+    std = [20.68, 24.95, 17.87]
+    dof = [14.65, 11.28, 18.47]
 
+    #brain_mask_size = brain_mask.sum()
     # caluclate chi lof likelihood for each contrast
-    ll_mtw = chi_ll(mtwo, mtwp, dof[0], std[0], chi=True)/mtwm.fdata().sum()
-    ll_pdw = chi_ll(pdwo, pdwp, dof[1], std[1], chi=True)/pdwm.fdata().sum()
-    ll_t1w = chi_ll(t1wo, t1wp, dof[2], std[2], chi=True)/t1wm.fdata().sum()
+    ll_mtw = chi_ll(mtwom, mtwpm, dof[0], std[0], model=model)
+    ll_pdw = chi_ll(pdwom, pdwpm, dof[1], std[1], model=model)
+    ll_t1w = chi_ll(t1wom, t1wpm, dof[2], std[2], model=model)
 
     print(ll_mtw)
     print(ll_pdw)
