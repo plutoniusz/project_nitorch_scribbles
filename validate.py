@@ -45,7 +45,7 @@ def chi_ll(dat, pred, dof, std, model='chi'):
     else :
         # gaussian log-likelihood
         res = dat.neg_().add_(pred)
-        ll = - (0.5 * dof * res.square().sum(dtype=torch.double)
+        ll = - (0.5 * rec_var * res.square().sum(dtype=torch.double)
             - 0.5*log(2.*pi*var))
     return ll
 
@@ -55,6 +55,7 @@ second_model = 'gauss'
 echos = [0]
 
 
+# need to extract noise parameters from the maps
 
 # # echo 5
 # std = [20.68, 24.95, 17.87]
@@ -128,7 +129,7 @@ if second_model:
     mtw_pred_snd = []
     pdw_pred_snd = []
     t1w_pred_snd = []
-    for filename in os.listdir(str(pth_pred)):
+    for filename in os.listdir(str(pth_pred_snd)):
         if filename.endswith(".nii") and filename.startswith("flash_mtw"):
             mtw_pred_snd.append(str(os.path.join(pth_pred_snd, filename)))
         elif filename.endswith(".nii") and filename.startswith("flash_pdw"):
@@ -137,7 +138,6 @@ if second_model:
             t1w_pred_snd.append(str(os.path.join(pth_pred_snd, filename)))
         else:
             continue
-    print(mtw_pred_snd)
 
 if second_model:
     save_folder = second_model + '_gauss' + '_results_leftout'
@@ -148,7 +148,7 @@ if second_model:
     mtw_pred_sndg = []
     pdw_pred_sndg = []
     t1w_pred_sndg = []
-    for filename in os.listdir(str(pth_pred)):
+    for filename in os.listdir(str(pth_pred_sndg)):
         if filename.endswith(".nii") and filename.startswith("flash_mtw"):
             mtw_pred_sndg.append(str(os.path.join(pth_pred_sndg, filename)))
         elif filename.endswith(".nii") and filename.startswith("flash_pdw"):
@@ -222,7 +222,6 @@ for echo in echos:
         save_folder = second_model + '_results_leftout'
         print(save_folder)
         # read predicted image
-        print(mtw_pred_snd[echo])
         mtwp_snd = qio.GradientEchoMulti(mtw_pred_snd[echo])
         pdwp_snd = qio.GradientEchoMulti(pdw_pred_snd[echo])
         t1wp_snd = qio.GradientEchoMulti(t1w_pred_snd[echo])
