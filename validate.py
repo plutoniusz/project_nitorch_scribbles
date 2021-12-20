@@ -45,8 +45,8 @@ def chi_ll(dat, pred, dof, std, model='chi'):
     else :
         # gaussian log-likelihood
         res = dat.neg_().add_(pred)
-        ll = - (0.5 * rec_var * res.square().sum(dtype=torch.double)
-            - 0.5*log(2.*pi*var))
+        ll = (0.5 * rec_var * res.square() - 0.5*log(2.*pi*var))
+        ll = torch.sum(ll, dtype=torch.double)
     return ll
 
 # second model for comparison
@@ -245,15 +245,15 @@ for echo in echos:
         print(f"log likeihood PD contrast with {second_model} model: {ll_pdw_snd}")
         print(f"log likeihood T1 contrast with {second_model} model: {ll_t1w_snd}")
      
-        print("chi log likelihood")
-        # caluclate chi lof likelihood for each contrast
-        ll_mtw_sndd = chi_ll(mtwom, mtwpm_snd, dof[0], std[0], model=model)
-        ll_pdw_sndd = chi_ll(pdwom, pdwpm_snd, dof[1], std[1], model=model)
-        ll_t1w_sndd = chi_ll(t1wom, t1wpm_snd, dof[2], std[2], model=model)
+        # print("chi log likelihood")
+        # # caluclate chi lof likelihood for each contrast
+        # ll_mtw_sndd = chi_ll(mtwom, mtwpm_snd, dof[0], std[0], model=model)
+        # ll_pdw_sndd = chi_ll(pdwom, pdwpm_snd, dof[1], std[1], model=model)
+        # ll_t1w_sndd = chi_ll(t1wom, t1wpm_snd, dof[2], std[2], model=model)
 
-        print(f"log likeihood MT contrast with {second_model} model: {ll_mtw_sndd}")
-        print(f"log likeihood PD contrast with {second_model} model: {ll_pdw_sndd}")
-        print(f"log likeihood T1 contrast with {second_model} model: {ll_t1w_sndd}")
+        # print(f"log likeihood MT contrast with {second_model} model: {ll_mtw_sndd}")
+        # print(f"log likeihood PD contrast with {second_model} model: {ll_pdw_sndd}")
+        # print(f"log likeihood T1 contrast with {second_model} model: {ll_t1w_sndd}")
 
      # second model for comparison
     if second_model:
