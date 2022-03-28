@@ -51,24 +51,58 @@ def chi_ll(dat, pred, dof, std, model='chi'):
 
 # second model for comparison
 second_model = 'gauss'
-#echos = [0,1,2,3,4,5]
-echos = [0]
+echos = [0,1,2,3,4,5]
+#echos = [0, 1, 2, 3]
+#datime = '2022-02-15_16-03-34'
+datime = '2022-03-14_18-51-49'
 
 
 # need to extract noise parameters from the maps
+# echo 0 chi
+std = [20.71, 24.77, 17.86]
+dof = [14.66, 11.42, 18.60]
+# echo 0 rice
+std = [20.71, 24.77, 17.86]
 
-# # echo 5
-# std = [20.68, 24.95, 17.87]
-# dof = [14.65, 11.28, 18.47]
+# echo 1 chi
+std = [20.74, 24.95, 17.94]
+dof = [14.57, 11.29, 18.38]
+# echo 1 gauss
+std = [20.74, 24.95, 17.94]
 
-# echo 2
+# echo 2 chi
 std = [20.74, 24.98, 17.95]
 dof = [14.57, 11.27, 18.35]
+# echo 2 rice
+std = [20.74, 24.98, 17.95]
 
+# echo 3 chi
+std = [20.70, 24.91, 17.90]
+dof = [14.62, 11.32, 18.43]
+# echo 3 rice
+std = [20.70, 24.91, 17.90]
+
+# ech0 4 chi
+std = [20.68, 24.92, 17.89]
+dof = [14.65, 11.31, 18.45]
+# echo 4 rice
+std = [20.68, 24.92, 17.89]
+
+# echo 5 chi
+std = [20.68, 24.95, 17.87]
+dof = [14.65, 11.28, 18.47]
+# echo 5 rice
+std = [20.68, 24.95, 17.87]
+
+mc = False
 cwd = os.getcwd()
 # parameter estimation model
 model = 'chi'
-save_folder = model + '_results_leftout'
+
+if mc:
+    save_folder = '4John_Klara/derivative/' + model + '_results_leftout_'+ datime
+else:
+    save_folder = model + '_results_leftout_'+ datime
 
 # read predicted image
 predicted = 'predicted'
@@ -86,10 +120,16 @@ for filename in os.listdir(str(pth_pred)):
     else:
         continue
 
-# read observed image
-pth_mris = [os.path.join(cwd, 'MPM/mtw_mfc_3dflash_v1i_R4_0012'),
-        os.path.join(cwd, 'MPM/pdw_mfc_3dflash_v1i_R4_0009'),
-        os.path.join(cwd, 'MPM/t1w_mfc_3dflash_v1i_R4_0015')]
+if mc:
+    pth_mris = [os.path.join(cwd, '4John_Klara/mtw_mfc_3dflash_v1k_180deg_RR_0038'),
+            os.path.join(cwd, '4John_Klara/pdw_mfc_3dflash_v1k_RR_0036'),
+            os.path.join(cwd, '4John_Klara/t1w_mfc_3dflash_v1k_RR_0034')]
+else:
+    pth_mris = [os.path.join(cwd, 'MPM/mtw_mfc_3dflash_v1i_R4_0012'),
+         os.path.join(cwd, 'MPM/pdw_mfc_3dflash_v1i_R4_0009'),
+         os.path.join(cwd, 'MPM/t1w_mfc_3dflash_v1i_R4_0015')]
+
+
 fmtw = []
 for filename in os.listdir(str(pth_mris[0])):
     if filename.endswith(".nii"):
@@ -111,7 +151,12 @@ for filename in os.listdir(str(pth_mris[2])):
 
 # read the brain mask
 mask_folder = 'mask'
-pth_mask = os.path.join(cwd, save_folder, mask_folder)
+
+if mc:
+    pth_mask = os.path.join(cwd, '4John_Klara/derivative')
+else:
+    pth_mask = os.path.join(cwd, save_folder, mask_folder)
+
 masks = []
 for filename in os.listdir(str(pth_mask)):
     if filename.endswith("mask.nii"):
@@ -121,7 +166,11 @@ for filename in os.listdir(str(pth_mask)):
 
 # second model for comparison
 if second_model:
-    save_folder = second_model + '_results_leftout'
+    if mc:
+        save_folder = '4John_Klara/derivative/' + second_model + '_results_leftout_'+ datime
+    else:
+        save_folder = second_model + '_results_leftout_'+ datime
+    
 
     # read predicted image
     predicted = 'predicted'
@@ -139,28 +188,33 @@ if second_model:
         else:
             continue
 
-if second_model:
-    save_folder = second_model + '_gauss' + '_results_leftout'
+# if second_model:
+#     #save_folder = second_model + '_gauss' + '_results_leftout'
+#     save_folder = '4John_Klara/derivative/' + model + '_gauss' + 'results_leftout_'+ datime
 
-    # read predicted image
-    predicted = 'predicted'
-    pth_pred_sndg = os.path.join(cwd, save_folder, predicted)
-    mtw_pred_sndg = []
-    pdw_pred_sndg = []
-    t1w_pred_sndg = []
-    for filename in os.listdir(str(pth_pred_sndg)):
-        if filename.endswith(".nii") and filename.startswith("flash_mtw"):
-            mtw_pred_sndg.append(str(os.path.join(pth_pred_sndg, filename)))
-        elif filename.endswith(".nii") and filename.startswith("flash_pdw"):
-            pdw_pred_sndg.append(str(os.path.join(pth_pred_sndg, filename)))
-        elif filename.endswith(".nii") and filename.startswith("flash_t1w"):
-            t1w_pred_sndg.append(str(os.path.join(pth_pred_sndg, filename)))
-        else:
-            continue
+#     # read predicted image
+#     predicted = 'predicted'
+#     pth_pred_sndg = os.path.join(cwd, save_folder, predicted)
+#     mtw_pred_sndg = []
+#     pdw_pred_sndg = []
+#     t1w_pred_sndg = []
+#     for filename in os.listdir(str(pth_pred_sndg)):
+#         if filename.endswith(".nii") and filename.startswith("flash_mtw"):
+#             mtw_pred_sndg.append(str(os.path.join(pth_pred_sndg, filename)))
+#         elif filename.endswith(".nii") and filename.startswith("flash_pdw"):
+#             pdw_pred_sndg.append(str(os.path.join(pth_pred_sndg, filename)))
+#         elif filename.endswith(".nii") and filename.startswith("flash_t1w"):
+#             t1w_pred_sndg.append(str(os.path.join(pth_pred_sndg, filename)))
+#         else:
+#             continue
 
 for echo in echos:
 
-    save_folder = model + '_results_leftout'
+    if mc:
+        save_folder = '4John_Klara/derivative/' + second_model + '_results_leftout_'+ datime
+    else:
+        save_folder = model + '_results_leftout_'+ datime
+
     print(save_folder)
 
     # read predicted image
@@ -174,7 +228,8 @@ for echo in echos:
     t1wo = qio.GradientEchoMulti(ft1w[echo])
 
     # read the brain mask
-    brain_mask = qio.GradientEchoSingle(masks[echo])
+    #brain_mask = qio.GradientEchoSingle(masks[echo])
+    brain_mask = qio.GradientEchoSingle(masks[0])
     brain_mask_affine =brain_mask.affine
     brain_mask = brain_mask.fdata(dtype=torch.double)
     msk = torch.isfinite(brain_mask)
@@ -190,9 +245,9 @@ for echo in echos:
     t1wpm = t1wp.fdata()*brain_mask
 
     # not needed really
-    # savef(mtwpm, os.path.join(cwd, save_folder+'/masked/mtwp'+str(echo)+'.nii'), affine = mtwp.affine)
-    # savef(pdwpm, os.path.join(cwd, save_folder+'/masked/pdwp'+str(echo)+'.nii'), affine = pdwp.affine)
-    # savef(t1wpm, os.path.join(cwd, save_folder+'/masked/t1wp'+str(echo)+'.nii'), affine = t1wp.affine)
+    savef(mtwpm, os.path.join(cwd, save_folder+'/masked/mtwp'+str(echo)+'.nii'), affine = mtwp.affine)
+    savef(pdwpm, os.path.join(cwd, save_folder+'/masked/pdwp'+str(echo)+'.nii'), affine = pdwp.affine)
+    savef(t1wpm, os.path.join(cwd, save_folder+'/masked/t1wp'+str(echo)+'.nii'), affine = t1wp.affine)
 
     # multiply mask by observed image
     mtwom = mtwo.fdata()*brain_mask
@@ -200,26 +255,33 @@ for echo in echos:
     t1wom = t1wo.fdata()*brain_mask
 
     # also not needed
-    # savef(mtwom, os.path.join(cwd, save_folder+'/masked/mtwo'+str(echo)+'.nii'), affine = mtwo.affine)
-    # savef(pdwom, os.path.join(cwd, save_folder+'/masked/pdwo'+str(echo)+'.nii'), affine = pdwo.affine)
-    # savef(t1wom, os.path.join(cwd, save_folder+'/masked/t1wo'+str(echo)+'.nii'), affine = t1wo.affine)
+    savef(mtwom, os.path.join(cwd, save_folder+'/masked/mtwo'+str(echo)+'.nii'), affine = mtwo.affine)
+    savef(pdwom, os.path.join(cwd, save_folder+'/masked/pdwo'+str(echo)+'.nii'), affine = pdwo.affine)
+    savef(t1wom, os.path.join(cwd, save_folder+'/masked/t1wo'+str(echo)+'.nii'), affine = t1wo.affine)
 
 
     #brain_mask_size = brain_mask.sum()
+  
     # caluclate chi lof likelihood for each contrast
     ll_mtw = chi_ll(mtwom, mtwpm, dof[0], std[0], model=model)
     ll_pdw = chi_ll(pdwom, pdwpm, dof[1], std[1], model=model)
     ll_t1w = chi_ll(t1wom, t1wpm, dof[2], std[2], model=model)
 
-    print(f"log likeihood MT contrast with {model} model: {ll_mtw}")
-    print(f"log likeihood PD contrast with {model} model: {ll_pdw}")
-    print(f"log likeihood T1 contrast with {model} model: {ll_t1w}")
+    like_text = f"log likeihood MT contrast with {model} model: {ll_mtw}\nlog likeihood PD contrast with {model} model: {ll_pdw}\nlog likeihood T1 contrast with {model} model: {ll_t1w}\n"
+    print(like_text)
+
+    with open('likelihoods_' + datime + '.txt', 'a') as f:
+        f.write(like_text)
+
     
 
     # second model for comparison
     if second_model:
 
-        save_folder = second_model + '_results_leftout'
+        if mc:
+            save_folder = '4John_Klara/derivative/' + second_model + '_results_leftout_'+ datime
+        else:
+            save_folder = second_model + '_results_leftout_'+ datime
         print(save_folder)
         # read predicted image
         mtwp_snd = qio.GradientEchoMulti(mtw_pred_snd[echo])
@@ -239,47 +301,48 @@ for echo in echos:
         # caluclate chi lof likelihood for each contrast
         ll_mtw_snd = chi_ll(mtwom, mtwpm_snd, dof[0], std[0], model=second_model)
         ll_pdw_snd = chi_ll(pdwom, pdwpm_snd, dof[1], std[1], model=second_model)
-
         ll_t1w_snd = chi_ll(t1wom, t1wpm_snd, dof[2], std[2], model=second_model)
-        print(f"log likeihood MT contrast with {second_model} model: {ll_mtw_snd}")
-        print(f"log likeihood PD contrast with {second_model} model: {ll_pdw_snd}")
-        print(f"log likeihood T1 contrast with {second_model} model: {ll_t1w_snd}")
+
+        like_text = f"log likeihood MT contrast with {second_model} model: {ll_mtw_snd}\nlog likeihood PD contrast with {second_model} model: {ll_pdw_snd}\nlog likeihood T1 contrast with {second_model} model: {ll_t1w_snd}\n"
+
+        with open('likelihoods_' + datime + '.txt', 'a') as f:
+            f.write(like_text)
+        print(like_text)
      
         # print("chi log likelihood")
         # # caluclate chi lof likelihood for each contrast
         # ll_mtw_sndd = chi_ll(mtwom, mtwpm_snd, dof[0], std[0], model=model)
         # ll_pdw_sndd = chi_ll(pdwom, pdwpm_snd, dof[1], std[1], model=model)
         # ll_t1w_sndd = chi_ll(t1wom, t1wpm_snd, dof[2], std[2], model=model)
-
         # print(f"log likeihood MT contrast with {second_model} model: {ll_mtw_sndd}")
         # print(f"log likeihood PD contrast with {second_model} model: {ll_pdw_sndd}")
         # print(f"log likeihood T1 contrast with {second_model} model: {ll_t1w_sndd}")
 
      # second model for comparison
-    if second_model:
+    # if second_model:
         
-        save_folder = second_model + '_gauss' + '_results_leftout'
-        print(save_folder)
-        # read predicted image
-        mtwp_sndg = qio.GradientEchoMulti(mtw_pred_sndg[echo])
-        pdwp_sndg = qio.GradientEchoMulti(pdw_pred_sndg[echo])
-        t1wp_sndg = qio.GradientEchoMulti(t1w_pred_sndg[echo])
+    #     save_folder = second_model + '_gauss' + '_results_leftout'
+    #     print(save_folder)
+    #     # read predicted image
+    #     mtwp_sndg = qio.GradientEchoMulti(mtw_pred_sndg[echo])
+    #     pdwp_sndg = qio.GradientEchoMulti(pdw_pred_sndg[echo])
+    #     t1wp_sndg = qio.GradientEchoMulti(t1w_pred_sndg[echo])
 
-        # multiply mask by predicted image
-        mtwpm_sndg = mtwp_sndg.fdata()*brain_mask
-        pdwpm_sndg = pdwp_sndg.fdata()*brain_mask
-        t1wpm_sndg = t1wp_sndg.fdata()*brain_mask
+    #     # multiply mask by predicted image
+    #     mtwpm_sndg = mtwp_sndg.fdata()*brain_mask
+    #     pdwpm_sndg = pdwp_sndg.fdata()*brain_mask
+    #     t1wpm_sndg = t1wp_sndg.fdata()*brain_mask
 
-        # not needed really
-        # savef(mtwpm_sndg, os.path.join(cwd, save_folder+'/masked/mtwp'+str(echo)+'.nii'), affine = mtwp_sndg.affine)
-        # savef(pdwpm_sndg, os.path.join(cwd, save_folder+'/masked/pdwp'+str(echo)+'.nii'), affine = pdwp_sndg.affine)
-        #savef(t1wpm_sndg, os.path.join(cwd, save_folder+'/masked/t1wp'+str(echo)+'.nii'), affine = t1wp_sndg.affine)
+    #     # not needed really
+    #     # savef(mtwpm_sndg, os.path.join(cwd, save_folder+'/masked/mtwp'+str(echo)+'.nii'), affine = mtwp_sndg.affine)
+    #     # savef(pdwpm_sndg, os.path.join(cwd, save_folder+'/masked/pdwp'+str(echo)+'.nii'), affine = pdwp_sndg.affine)
+    #     #savef(t1wpm_sndg, os.path.join(cwd, save_folder+'/masked/t1wp'+str(echo)+'.nii'), affine = t1wp_sndg.affine)
 
-        # caluclate chi lof likelihood for each contrast
-        ll_mtw_snd = chi_ll(mtwom, mtwpm_snd, dof[0], std[0], model=second_model)
-        ll_pdw_snd = chi_ll(pdwom, pdwpm_snd, dof[1], std[1], model=second_model)
-        ll_t1w_snd = chi_ll(t1wom, t1wpm_snd, dof[2], std[2], model=second_model)
+    #     # caluclate chi lof likelihood for each contrast
+    #     ll_mtw_snd = chi_ll(mtwom, mtwpm_snd, dof[0], std[0], model=second_model)
+    #     ll_pdw_snd = chi_ll(pdwom, pdwpm_snd, dof[1], std[1], model=second_model)
+    #     ll_t1w_snd = chi_ll(t1wom, t1wpm_snd, dof[2], std[2], model=second_model)
 
-        print(f"log likeihood MT contrast with {second_model} model: {ll_mtw_snd}")
-        print(f"log likeihood PD contrast with {second_model} model: {ll_pdw_snd}")
-        print(f"log likeihood T1 contrast with {second_model} model: {ll_t1w_snd}")
+    #     print(f"log likeihood MT contrast with {second_model} model: {ll_mtw_snd}")
+    #     print(f"log likeihood PD contrast with {second_model} model: {ll_pdw_snd}")
+    #     print(f"log likeihood T1 contrast with {second_model} model: {ll_t1w_snd}")

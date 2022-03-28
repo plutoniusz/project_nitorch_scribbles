@@ -6,27 +6,40 @@ from nitorch.io import savef
 from nitorch.tools.qmri.relax import greeq
 from nitorch.tools.qmri.relax._mpm._predict import gre
 
+from pathlib import Path
+from datetime import datetime
 
-echos = [0,1,3,4,5]
-#echos = [2]
+
+#echos = [0, 1, 2, 3, 4, 5]
+echos = [0,1,2]
 second_model = 'gauss'
 model = 'chi'
+penalty = dict(pd=5, r1=5, mt=5, r2s=0.5)
+mc = False
 
 # paths to dataset
 print("getting paths to MPM folder")
 cwd = os.getcwd()
-pth_mris = [os.path.join(cwd, 'MPM/mtw_mfc_3dflash_v1i_R4_0012'),
-            os.path.join(cwd, 'MPM/pdw_mfc_3dflash_v1i_R4_0009'),
-            os.path.join(cwd, 'MPM/t1w_mfc_3dflash_v1i_R4_0015')]
+
+if mc:
+    pth_mris = [os.path.join(cwd, '4John_Klara/mtw_mfc_3dflash_v1k_180deg_RR_0038'),
+                os.path.join(cwd, '4John_Klara/pdw_mfc_3dflash_v1k_RR_0036'),
+                os.path.join(cwd, '4John_Klara/t1w_mfc_3dflash_v1k_RR_0034')]
+
+else:
+    pth_mris = [os.path.join(cwd, 'MPM/mtw_mfc_3dflash_v1i_R4_0012'),
+                os.path.join(cwd, 'MPM/pdw_mfc_3dflash_v1i_R4_0009'),
+                os.path.join(cwd, 'MPM/t1w_mfc_3dflash_v1i_R4_0015')]
+
 print("paths to additional maps")
-b1p_map = str(os.path.join(cwd, "MPM/pdw_mfc_3dflash_v1i_R4_0009/Results/Supplementary/anon_s2018-02-28_18-26-184837-00001-00001-1_B1map.nii"))
-b1p_ref = str(os.path.join(cwd, "MPM/pdw_mfc_3dflash_v1i_R4_0009/Results/Supplementary/anon_s2018-02-28_18-26-184837-00001-00001-1_B1ref.nii"))
-mtw_b1m_map = str(os.path.join(cwd, "MPM/pdw_mfc_3dflash_v1i_R4_0009/Results/Supplementary/sensMap_HC_over_BC_division_MT.nii"))
-pdw_b1m_map = str(os.path.join(cwd, "MPM/pdw_mfc_3dflash_v1i_R4_0009/Results/Supplementary/sensMap_HC_over_BC_division_PD.nii"))
-t1w_b1m_map = str(os.path.join(cwd, "MPM/pdw_mfc_3dflash_v1i_R4_0009/Results/Supplementary/sensMap_HC_over_BC_division_T1.nii"))
+if not mc:
+    b1p_map = str(os.path.join(cwd, "MPM/pdw_mfc_3dflash_v1i_R4_0009/Results/Supplementary/anon_s2018-02-28_18-26-184837-00001-00001-1_B1map.nii"))
+    b1p_ref = str(os.path.join(cwd, "MPM/pdw_mfc_3dflash_v1i_R4_0009/Results/Supplementary/anon_s2018-02-28_18-26-184837-00001-00001-1_B1ref.nii"))
+    mtw_b1m_map = str(os.path.join(cwd, "MPM/pdw_mfc_3dflash_v1i_R4_0009/Results/Supplementary/sensMap_HC_over_BC_division_MT.nii"))
+    pdw_b1m_map = str(os.path.join(cwd, "MPM/pdw_mfc_3dflash_v1i_R4_0009/Results/Supplementary/sensMap_HC_over_BC_division_PD.nii"))
+    t1w_b1m_map = str(os.path.join(cwd, "MPM/pdw_mfc_3dflash_v1i_R4_0009/Results/Supplementary/sensMap_HC_over_BC_division_T1.nii"))
 
-
-
+datime = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 for echo in echos:
     # preparing path lists of observations    
     print(f"left out echo: {echo}")
@@ -65,10 +78,14 @@ for echo in echos:
     pdw = qio.GradientEchoMulti.from_fnames(fpdw)
     mtw = qio.GradientEchoMulti.from_fnames(fmtw, mt=True)
     print("precomputind field maps")
-    transmit = qio.PrecomputedFieldMap(b1p_map, magnitude=b1p_ref)
-    receive = [qio.PrecomputedFieldMap(pdw_b1m_map,  unit='a.u'),
-                qio.PrecomputedFieldMap(t1w_b1m_map, unit='a.u'),
-                qio.PrecomputedFieldMap(mtw_b1m_map, unit='a.u')]
+    if mc:
+        transmit = None
+        receive = [None]*3
+    else:
+        transmit = qio.PrecomputedFieldMap(b1p_map, magnitude=b1p_ref)
+        receive = [qio.PrecomputedFieldMap(pdw_b1m_map,  unit='a.u'),
+                    qio.PrecomputedFieldMap(t1w_b1m_map, unit='a.u'),
+                    qio.PrecomputedFieldMap(mtw_b1m_map, unit='a.u')]
 
     # options for parameter estimation
     mtw.mt = True
@@ -82,9 +99,11 @@ for echo in echos:
     opt.noisemodel = 'chi'
     print(f"loglikelihood: {opt.likelihood}, noisemodel: {opt.noisemodel}")
     print("start greeq")
+    opt.penalty.factor = penalty
     pd, r1, r2s, mt = greeq([pdw, t1w, mtw], transmit, receive, opt=opt)
     #saving parameter maps
-    save_folder = opt.likelihood + '_results_leftout'
+    save_folder = opt.likelihood + '_results_leftout_' + datime
+    pm_path = Path(save_folder + '/parameter_map').mkdir(parents=True, exist_ok=True)
     savef(pd.volume, os.path.join(cwd, save_folder + '/parameter_map' +'/pd'+str(echo)+'.nii'), affine= pd.affine)
     savef(r1.volume, os.path.join(cwd, save_folder + '/parameter_map' +'/r1'+str(echo)+'.nii'), affine= r1.affine)
     savef(r2s.volume, os.path.join(cwd, save_folder + '/parameter_map' +'/r2s'+str(echo)+'.nii'), affine= r2s.affine)
@@ -92,10 +111,10 @@ for echo in echos:
 
     # paths to paramter maps
     cwd = os.getcwd()
-    mtp = os.path.join(cwd, save_folder + '/parameter_map' +'/mt'+str(echo)+'.nii')
-    pdp = os.path.join(cwd, save_folder + '/parameter_map' +'/pd'+str(echo)+'.nii')
-    r1p = os.path.join(cwd, save_folder + '/parameter_map' +'/r1'+str(echo)+'.nii')
-    r2sp = os.path.join(cwd, save_folder + '/parameter_map' +'/r2s'+str(echo)+'.nii')
+    mtp = os.path.join(cwd, save_folder + '/parameter_map' +'/pd'+str(echo)+'.nii')
+    pdp = os.path.join(cwd, save_folder + '/parameter_map' +'/r1'+str(echo)+'.nii')
+    r1p = os.path.join(cwd, save_folder + '/parameter_map' +'/r2s'+str(echo)+'.nii')
+    r2sp = os.path.join(cwd, save_folder + '/parameter_map' +'/mt'+str(echo)+'.nii')
     # reading the parameter maps
     if not isinstance(pdp, ParameterMap):
         pdp = ParameterMap(pdp)
@@ -109,10 +128,12 @@ for echo in echos:
 
     # calculating the predicted echo with gre for three contrasts mtw, pdw, t1w
     mtwl = qio.GradientEchoMulti(mtwl)
+    
     print(mtwl.te, mtwl.tr, mtwl.fa, mtw.noise, mtw.dof)
     flash = gre(pdp, r1p, r2sp,  mtp,  transmit=transmit, receive=receive[2], te=mtwl.te, tr=mtwl.tr, fa=mtwl.fa, mtpulse=True, affine=mtwl.affine, shape=mtwl.shape)
+    pr_path = Path(save_folder + '/predicted').mkdir(parents=True, exist_ok=True)
     text = save_folder + '/predicted' + '/flash_mtw'+str(echo)+'.nii'
-    savef(flash.volume, os.path.join(cwd, text), affine=flash.affine) #, noise = pdp.noise[2], dof = pdp.dof[2]
+    savef(flash.volume, os.path.join(cwd, text), affine=flash.affine)
 
     pdwl = qio.GradientEchoMulti(pdwl)
     print(pdwl.te, mtwl.tr, pdwl.fa, pdw.noise, pdw.dof)
@@ -126,7 +147,7 @@ for echo in echos:
     text = save_folder + '/predicted' + '/flash_t1w'+str(echo)+'.nii'
     savef(flash.volume, os.path.join(cwd, text), affine=flash.affine)
 
-    # second model for comparison
+    #second model for comparison
     if second_model:
 
         mtw.mt = True
@@ -140,9 +161,11 @@ for echo in echos:
         opt.noisemodel = 'chi'
         print(f"loglikelihood: {opt.likelihood}, noisemodel: {opt.noisemodel}")
         print("start greeq")
+        opt.penalty.factor = penalty 
         pd, r1, r2s, mt = greeq([pdw, t1w, mtw], transmit, receive, opt=opt)
         #saving parameter maps
-        save_folder = opt.likelihood + '_results_leftout'
+        save_folder = opt.likelihood + '_results_leftout_' + datime
+        pm_path = Path(save_folder + '/parameter_map').mkdir(parents=True, exist_ok=True)
         savef(pd.volume, os.path.join(cwd, save_folder + '/parameter_map' +'/pd'+str(echo)+'.nii'), affine= pd.affine)
         savef(r1.volume, os.path.join(cwd, save_folder + '/parameter_map' +'/r1'+str(echo)+'.nii'), affine= r1.affine)
         savef(r2s.volume, os.path.join(cwd, save_folder + '/parameter_map' +'/r2s'+str(echo)+'.nii'), affine= r2s.affine)
@@ -166,25 +189,27 @@ for echo in echos:
             mtp.unit = '%'
 
         # calculating the predicted echo with gre for three contrasts mtw, pdw, t1w
-        mtwl = qio.GradientEchoMulti(mtwl)
+        #mtwl = qio.GradientEchoMulti(mtwl)
         print(mtwl.te, mtwl.tr, mtwl.fa, mtw.noise, mtw.dof)
         flash = gre(pdp, r1p, r2sp,  mtp,  transmit=transmit, receive=receive[2], te=mtwl.te, tr=mtwl.tr, fa=mtwl.fa, mtpulse=True, affine=mtwl.affine, shape=mtwl.shape)
+        pr_path = Path(save_folder + '/predicted').mkdir(parents=True, exist_ok=True)
         text = save_folder + '/predicted' + '/flash_mtw'+str(echo)+'.nii'
-        savef(flash.volume, os.path.join(cwd, text), affine=flash.affine) #, noise = pdp.noise[2], dof = pdp.dof[2]
+        savef(flash.volume, os.path.join(cwd, text), affine=flash.affine)
 
-        pdwl = qio.GradientEchoMulti(pdwl)
+        #pdwl = qio.GradientEchoMulti(pdwl)
         print(pdwl.te, mtwl.tr, pdwl.fa, pdw.noise, pdw.dof)
         flash = gre(pdp, r1p, r2sp,  mtp,  transmit=transmit, receive=receive[0], te=pdwl.te, tr=pdwl.tr, fa=pdwl.fa, mtpulse=False, affine=pdwl.affine, shape=pdwl.shape)
         text = save_folder + '/predicted' + '/flash_pdw'+str(echo)+'.nii'
         savef(flash.volume, os.path.join(cwd, text), affine=flash.affine)
 
-        t1wl = qio.GradientEchoMulti(t1wl)
+        #t1wl = qio.GradientEchoMulti(t1wl)
         print(t1wl.te, t1wl.tr, t1wl.fa, t1w.noise, t1w.dof)
         flash = gre(pdp, r1p, r2sp,  mtp,  transmit=transmit, receive=receive[1], te=t1wl.te, tr=t1wl.tr, fa=t1wl.fa, mtpulse=False, affine=t1wl.affine, shape=t1wl.shape)
         text = save_folder + '/predicted' + '/flash_t1w'+str(echo)+'.nii'
         savef(flash.volume, os.path.join(cwd, text), affine=flash.affine)
 
-    if second_model:
+    #if second_model:
+    if False:
 
         mtw.mt = True
         opt = GREEQOptions()
@@ -197,17 +222,20 @@ for echo in echos:
         opt.noisemodel = 'rice'
         print(f"loglikelihood: {opt.likelihood}, noisemodel: {opt.noisemodel}")
         print("start greeq")
+        opt.penalty.factor = penalty
         pd, r1, r2s, mt = greeq([pdw, t1w, mtw], transmit, receive, opt=opt)
         #saving parameter maps
-        save_folder = opt.likelihood + '_gauss' + '_results_leftout'
-        savef(pd.volume, os.path.join(cwd, save_folder + '/parameter_map' +'/pd'+str(echo)+'.nii'), affine= pd.affine)
+        save_folder = opt.likelihood + '_rice' + '_results_leftout_' + datime
+        pm_path = Path(save_folder + '/parameter_map').mkdir(parents=True, exist_ok=True)
+
+        savef(pd.volume, os.path.join(cwd, save_folder + '/parameter_map'+ '/pd'+str(echo)+'.nii'), affine= pd.affine)
         savef(r1.volume, os.path.join(cwd, save_folder + '/parameter_map' +'/r1'+str(echo)+'.nii'), affine= r1.affine)
         savef(r2s.volume, os.path.join(cwd, save_folder + '/parameter_map' +'/r2s'+str(echo)+'.nii'), affine= r2s.affine)
         savef(mt.volume, os.path.join(cwd, save_folder + '/parameter_map' +'/mt'+str(echo)+'.nii'), affine= mt.affine)
 
         # paths to paramter maps
         cwd = os.getcwd()
-        mtp = os.path.join(cwd, save_folder + '/parameter_map' +'/mt'+str(echo)+'.nii')
+        mtp = os.path.join(cwd, save_folder + '/parameter_map'+'/mt'+str(echo)+'.nii')
         pdp = os.path.join(cwd, save_folder + '/parameter_map' +'/pd'+str(echo)+'.nii')
         r1p = os.path.join(cwd, save_folder + '/parameter_map' +'/r1'+str(echo)+'.nii')
         r2sp = os.path.join(cwd, save_folder + '/parameter_map' +'/r2s'+str(echo)+'.nii')
@@ -223,9 +251,10 @@ for echo in echos:
             mtp.unit = '%'
 
         # calculating the predicted echo with gre for three contrasts mtw, pdw, t1w
-        mtwl = qio.GradientEchoMulti(mtwl)
+        #mtwl = qio.GradientEchoMulti(mtwl)
         print(mtwl.te, mtwl.tr, mtwl.fa, mtw.noise, mtw.dof)
         flash = gre(pdp, r1p, r2sp,  mtp,  transmit=transmit, receive=receive[2], te=mtwl.te, tr=mtwl.tr, fa=mtwl.fa, mtpulse=True, affine=mtwl.affine, shape=mtwl.shape)
+        pr_path = Path(save_folder + '/predicted').mkdir(parents=True, exist_ok=True)
         text = save_folder + '/predicted' + '/flash_mtw'+str(echo)+'.nii'
         savef(flash.volume, os.path.join(cwd, text), affine=flash.affine) #, noise = pdp.noise[2], dof = pdp.dof[2]
 
