@@ -75,50 +75,7 @@ for index, datime in enumerate(datime_list):
         dataset = datasets[index]
     else:
         dataset = datasets[0]
-    for model in models:
-        save_folder = 'qmri_results/' + model + '_results_leftout_'+ datime
-        # read predicted image
-        predicted_folder = 'predicted'
-        pth_pred = os.path.join(cwd, save_folder, predicted_folder)
-        mtw_pred = []
-        pdw_pred = []
-        t1w_pred = []
-        for filename in os.listdir(str(pth_pred)):
-            if filename.endswith(".nii") and filename.startswith("flash_mtw"):
-                mtw_pred.append(str(os.path.join(pth_pred, filename)))
-            elif filename.endswith(".nii") and filename.startswith("flash_pdw"):
-                pdw_pred.append(str(os.path.join(pth_pred, filename)))
-            elif filename.endswith(".nii") and filename.startswith("flash_t1w"):
-                t1w_pred.append(str(os.path.join(pth_pred, filename)))
-            else:
-                continue
 
-        #read noise and dof
-        if model == "chi":
-            dof_chi = []
-            noise_chi = []
-            noise_txt = "noise_" + datime + ".txt"
-            if not os.path.exists(os.path.join(save_folder,  noise_txt)):
-                noise_txt = 'noise_' + dataset + '_' + datime + '.txt'
-            with open(os.path.join(save_folder,  noise_txt)) as f:
-                lines = f.readlines()
-            for i in range(len(echos)):
-                line = lines[i]
-                line = line.replace('[', "")
-                line = line.replace(']', "")
-                line = line.replace(',', "")
-
-                split_line = line.split()
-                if any(l == 'chi' for l in split_line):
-                    line = re.findall(r'[+-]?[0-9]+\.?[0-9]*', line)
-                    noise_chi.append(line[1:4])
-                    dof_chi.append(line[4:])
-
-                if any(l == 'gauss' for l in split_line):
-                    line = re.findall(r'[+-]?[0-9]+\.?[0-9]*', line)
-                    noise_chi.append(line[1:4])
-                    dof_chi.append(line[4:])
-    
     # read observed image
     if dataset == 'mc':
         pth_mris = [os.path.join(cwd, '4John_Klara/mtw_mfc_3dflash_v1k_180deg_RR_0038'),
@@ -157,31 +114,82 @@ for index, datime in enumerate(datime_list):
         else:
             continue
 
-    # read the brain mask
-    mask_folder = 'mask'
-    if dataset == "mc":
-        pth_mask = os.path.join(cwd, '4John_Klara/derivative')
-    if dataset == "mpm":
-        pth_mask = os.path.join(cwd, save_folder, mask_folder)
-        pth_mask = os.path.join(cwd, "MPM")
-    elif cl:
-        gen_path = "/data/underworld/kbas/03_data/derivatives/"
-        path_mask = os.path.join(gen_path, dataset)
-        path_pom = os.listdir(path_mask)
-        path_pom = [d for d in path_pom if os.path.isdir(os.path.join(path_mask, d))]
-        path_mask = os.path.join(path_mask, path_pom[0])
-        #pth_mask = os.path.join(path_mask, "dwi/qmap-preproc-dwimask")
-        pth_mask = os.path.join(path_mask, "anat/spm-qmap-preproc")
-    for filename in os.listdir(str(pth_mask)):
-        if filename.endswith("brain_mask.nii"):
-            mask = (str(os.path.join(pth_mask, filename)))
-        else:
-            continue
+    for model in models:
+        save_folder = 'qmri_results/' + model + '_results_leftout_'+ datime
+        # read predicted image
+        predicted_folder = 'predicted'
+        pth_pred = os.path.join(cwd, save_folder, predicted_folder)
+        mtw_pred = []
+        pdw_pred = []
+        t1w_pred = []
+        for filename in os.listdir(str(pth_pred)):
+            if filename.endswith(".nii") and filename.startswith("flash_mtw"):
+                mtw_pred.append(str(os.path.join(pth_pred, filename)))
+            elif filename.endswith(".nii") and filename.startswith("flash_pdw"):
+                pdw_pred.append(str(os.path.join(pth_pred, filename)))
+            elif filename.endswith(".nii") and filename.startswith("flash_t1w"):
+                t1w_pred.append(str(os.path.join(pth_pred, filename)))
+            else:
+                continue
+        if model == "chi":
+            pth_pred_chi = pth_pred
+        if model == "gauss":
+            pth_pred_gauss = pth_pred
+        
+        #read noise and dof
+        if model == "chi":
+            dof_chi = []
+            noise_chi = []
+            noise_txt = "noise_" + datime + ".txt"
+            if not os.path.exists(os.path.join(save_folder,  noise_txt)):
+                noise_txt = 'noise_' + dataset + '_' + datime + '.txt'
+            with open(os.path.join(save_folder,  noise_txt)) as f:
+                lines = f.readlines()
+            for i in range(len(echos)):
+                line = lines[i]
+                line = line.replace('[', "")
+                line = line.replace(']', "")
+                line = line.replace(',', "")
 
+                split_line = line.split()
+                if any(l == 'chi' for l in split_line):
+                    line = re.findall(r'[+-]?[0-9]+\.?[0-9]*', line)
+                    noise_chi.append(line[1:4])
+                    dof_chi.append(line[4:])
+
+                if any(l == 'gauss' for l in split_line):
+                    line = re.findall(r'[+-]?[0-9]+\.?[0-9]*', line)
+                    noise_chi.append(line[1:4])
+                    dof_chi.append(line[4:])
+            
+            # read the brain mask
+            mask_folder = 'mask'
+            if dataset == "mc":
+                pth_mask = os.path.join(cwd, '4John_Klara/derivative')
+            if dataset == "mpm":
+                pth_mask = os.path.join(cwd, save_folder, mask_folder)
+                pth_mask = os.path.join(cwd, "MPM")
+            elif cl:
+                gen_path = "/data/underworld/kbas/03_data/derivatives/"
+                path_mask = os.path.join(gen_path, dataset)
+                path_pom = os.listdir(path_mask)
+                path_pom = [d for d in path_pom if os.path.isdir(os.path.join(path_mask, d))]
+                path_mask = os.path.join(path_mask, path_pom[0])
+                #pth_mask = os.path.join(path_mask, "dwi/qmap-preproc-dwimask")
+                pth_mask = os.path.join(path_mask, "anat/spm-qmap-preproc")
+            for filename in os.listdir(str(pth_mask)):
+                if filename.endswith("brain_mask.nii"):
+                    mask = (str(os.path.join(pth_mask, filename)))
+                else:
+                    continue
+    
     for echo in echos:
-        print (echo)
         for model in models:
             save_folder = 'qmri_results/' + model + '_results_leftout_'+ datime
+            if model == 'chi':
+                path_pred = pth_pred_chi
+            if model == "gauss":
+                path_pred = pth_pred_gauss
 
             # read predicted image
             mtwp = qio.GradientEchoMulti(mtw_pred[echo])
@@ -245,9 +253,9 @@ for index, datime in enumerate(datime_list):
                 savef(brain_mask_t1, os.path.join(cwd, save_folder+'/mask_processed_t1.nii'), affine = brain_mask_affine)
 
                 # multiply mask by observed image
-                mtwom = mtwo.fdata()*brain_mask_mtp
-                pdwom = pdwo.fdata()*brain_mask_pdp
-                t1wom = t1wo.fdata()*brain_mask_t1p
+                mtwom = mtwo.fdata()*brain_mask_mt
+                pdwom = pdwo.fdata()*brain_mask_pd
+                t1wom = t1wo.fdata()*brain_mask_t1
 
                 # # save masked observed images
                 # savef(mtwom, os.path.join(cwd, save_folder+'/masked/mtwo'+str(echo)+'.nii'), affine = mtwo.affine)
@@ -256,7 +264,6 @@ for index, datime in enumerate(datime_list):
 
             dof = dof_chi[echo]
             std = noise_chi[echo]
-            print("likelihood")
             ll_mtw = chi_ll(mtwom, mtwpm, float(dof[0]), float(std[0]), model=model)
             ll_pdw = chi_ll(pdwom, pdwpm, float(dof[1]), float(std[1]), model=model)
             ll_t1w = chi_ll(t1wom, t1wpm, float(dof[2]), float(std[2]), model=model)
@@ -265,3 +272,6 @@ for index, datime in enumerate(datime_list):
             like_text = f"log likeihood MT contrast with {model} model: {ll_mtw}\nlog likeihood PD contrast with {model} model: {ll_pdw}\nlog likeihood T1 contrast with {model} model: {ll_t1w}\n"
             with open(save_folder + '/likelihoods_' + datime + "_" + datime_val + '.txt', 'a') as f:
                 f.write(like_text)
+            
+            print(dataset)
+            print(like_text)
