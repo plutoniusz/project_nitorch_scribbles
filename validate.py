@@ -12,15 +12,12 @@ from pathlib import Path
 import re
 from datetime import datetime
 
-def chi_ll(dat, pred, dof, var, model='chi', contrast = "mt", ll_save = False):
+def chi_ll(dat, pred, dof, var, model='chi', contrast = "mt", ll_save = False, msk_check = 0):
     """
     Calculate the log likelihood of the observation given predicted echo
 
     """
-    rec_var = 1/var
-    msk_check = torch.isfinite(pred) & torch.isfinite(dat) & (dat > 0) & (pred > 0)
-    dat[~msk_check] = 0
-    pred[~msk_check] = 0
+    rec_var = 1./var
 
     if model == 'chi':
         if ll_save:
@@ -33,6 +30,7 @@ def chi_ll(dat, pred, dof, var, model='chi', contrast = "mt", ll_save = False):
                 - 0.5 * rec_var * (pred[msk_check].square() + dat[msk_check].square())
                 + besseli(dof/2.-1., z[msk_check], 'log')
                 - log(var))
+            print(os.path.join(cwd, save_folder+'/masked/ll_chi'+str(echo)+ contrast + '.nii'))
             savef(-ll, os.path.join(cwd, save_folder+'/masked/ll_chi'+str(echo)+ contrast + '.nii'), affine = mtwp.affine)
         else:
             z = (dat[msk_check]*pred[msk_check]*rec_var)
@@ -52,6 +50,7 @@ def chi_ll(dat, pred, dof, var, model='chi', contrast = "mt", ll_save = False):
             ll = torch.zeros(s, dtype=torch.double)
             res[msk_check] = pred[msk_check].neg_().add_(dat[msk_check])
             ll[msk_check] = - (0.5 * rec_var * res[msk_check].square() + 0.5*log(2.*pi*var))
+            print(os.path.join(cwd, save_folder+'/masked/ll_gauss'+str(echo)+ contrast + '.nii'))
             savef(-ll, os.path.join(cwd, save_folder+'/masked/ll_gauss'+str(echo)+ contrast + '.nii'), affine = mtwp.affine)
         else:
             res = pred[msk_check].neg_().add_(dat[msk_check])
@@ -147,9 +146,9 @@ for index, datime in enumerate(datime_list):
             else:
                 continue
         if model == "chi":
-            pth_pred_chi = pth_pred
+            pred_list_chi = [mtw_pred, pdw_pred, t1w_pred]
         if model == "gauss":
-            pth_pred_gauss = pth_pred
+            pred_list_gauss = [mtw_pred, pdw_pred, t1w_pred]
         
         #read noise and dof
         if model == "chi":
@@ -202,9 +201,14 @@ for index, datime in enumerate(datime_list):
         for model in models:
             save_folder = 'qmri_results/' + model + '_results_leftout_'+ datime
             if model == 'chi':
-                path_pred = pth_pred_chi
+                mtw_pred = pred_list_chi[0]
+                pdw_pred = pred_list_chi[1]
+                t1w_pred = pred_list_chi[2]
             if model == "gauss":
-                path_pred = pth_pred_gauss
+                mtw_pred = pred_list_gauss[0]
+                pdw_pred = pred_list_gauss[1]
+                t1w_pred = pred_list_gauss[2]
+
 
             # read predicted image
             mtwp = qio.GradientEchoMulti(mtw_pred[echo])
@@ -227,17 +231,23 @@ for index, datime in enumerate(datime_list):
                 mat = lmdiv(brain_mask_affine, mtwp.affine)
                 grid = smart_grid(mat, mtwp.shape, brain_mask.shape)
                 brain_mask_mtp = smart_pull(brain_mask, grid)
-                brain_mask_mtp = torch.ceil(brain_mask_mtp)
+                mtp_msk = torch.gt(brain_mask_mtp, 0.5)
+                brain_mask_mtp[mtp_msk] = 1.
+                brain_mask_mtp[~mtp_msk] = 0.
 
                 mat = lmdiv(brain_mask_affine, pdwp.affine)
                 grid = smart_grid(mat, pdwp.shape, brain_mask.shape)
                 brain_mask_pdp = smart_pull(brain_mask, grid)
-                brain_mask_pdp = torch.ceil(brain_mask_pdp)
+                pdp_msk = torch.gt(brain_mask_pdp, 0.5)
+                brain_mask_pdp[pdp_msk] = 1.
+                brain_mask_pdp[~pdp_msk] = 0.
 
                 mat = lmdiv(brain_mask_affine, t1wp.affine)
                 grid = smart_grid(mat, t1wp.shape, brain_mask.shape)
                 brain_mask_t1p = smart_pull(brain_mask, grid)
-                brain_mask_t1p = torch.ceil(brain_mask_t1p)
+                t1p_msk = torch.gt(brain_mask_t1p, 0.5)
+                brain_mask_t1p[t1p_msk] = 1.
+                brain_mask_t1p[~t1p_msk] = 0.
 
                 savef(brain_mask_mtp, os.path.join(cwd, save_folder+'/mask_processed_mtp.nii'), affine = brain_mask_affine)
                 savef(brain_mask_pdp, os.path.join(cwd, save_folder+'/mask_processed_pdp.nii'), affine = brain_mask_affine)
@@ -247,17 +257,18 @@ for index, datime in enumerate(datime_list):
                 mtwpm = mtwp.fdata()*brain_mask_mtp
                 pdwpm = pdwp.fdata()*brain_mask_pdp
                 t1wpm = t1wp.fdata()*brain_mask_t1p
+
+                # save masked predicted images
+                pm_path = Path(save_folder + '/masked').mkdir(parents=True, exist_ok=True)
+                if mask_save:
+                    savef(mtwpm, os.path.join(cwd, save_folder+'/masked/mtwp'+str(echo)+'.nii'), affine = mtwp.affine)
+                    savef(pdwpm, os.path.join(cwd, save_folder+'/masked/pdwp'+str(echo)+'.nii'), affine = pdwp.affine)
+                    savef(t1wpm, os.path.join(cwd, save_folder+'/masked/t1wp'+str(echo)+'.nii'), affine = t1wp.affine)
+
             else:
                 mtwpm = mtwp.fdata(dtype=torch.double)
                 pdwpm = pdwp.fdata(dtype=torch.double)
                 t1wpm = t1wp.fdata(dtype=torch.double)
-
-            # save masked predicted images
-            pm_path = Path(save_folder + '/masked').mkdir(parents=True, exist_ok=True)
-            if mask_save:
-                savef(mtwpm, os.path.join(cwd, save_folder+'/masked/mtwp'+str(echo)+'.nii'), affine = mtwp.affine)
-                savef(pdwpm, os.path.join(cwd, save_folder+'/masked/pdwp'+str(echo)+'.nii'), affine = pdwp.affine)
-                savef(t1wpm, os.path.join(cwd, save_folder+'/masked/t1wp'+str(echo)+'.nii'), affine = t1wp.affine)
 
             # mask observed images, same for gauss and chi
             if model =="chi":
@@ -265,19 +276,25 @@ for index, datime in enumerate(datime_list):
                     mat = lmdiv(brain_mask_affine, mtwo.affine)
                     grid = smart_grid(mat, mtwo.shape, brain_mask.shape)
                     brain_mask_mt = smart_pull(brain_mask, grid)
-                    brain_mask_mt = torch.ceil(brain_mask_mt)
+                    mt_msk = torch.gt(brain_mask_mt, 0.5)
+                    brain_mask_mt[mt_msk] = 1.
+                    brain_mask_mt[~mt_msk] = 0.
                     savef(brain_mask_mt, os.path.join(cwd, save_folder+'/mask_processed_mt.nii'), affine = brain_mask_affine)
 
                     mat = lmdiv(brain_mask_affine, pdwo.affine)
                     grid = smart_grid(mat, pdwo.shape, brain_mask.shape)
                     brain_mask_pd = smart_pull(brain_mask, grid)
-                    brain_mask_pd = torch.ceil(brain_mask_pd)
+                    pd_msk = torch.gt(brain_mask_pd, 0.5)
+                    brain_mask_pd[pd_msk] = 1.
+                    brain_mask_pd[~pd_msk] = 0.
                     savef(brain_mask_pd, os.path.join(cwd, save_folder+'/mask_processed_pd.nii'), affine = brain_mask_affine)
 
                     mat = lmdiv(brain_mask_affine, t1wo.affine)
                     grid = smart_grid(mat, t1wo.shape, brain_mask.shape)
                     brain_mask_t1 = smart_pull(brain_mask, grid)
-                    brain_mask_t1 = torch.ceil(brain_mask_t1)
+                    t1_msk = torch.gt(brain_mask_t1, 0.5)
+                    brain_mask_t1[t1_msk] = 1.
+                    brain_mask_t1[~t1_msk] = 0.
                     savef(brain_mask_t1, os.path.join(cwd, save_folder+'/mask_processed_t1.nii'), affine = brain_mask_affine)
 
                     # multiply mask by observed image
@@ -297,11 +314,19 @@ for index, datime in enumerate(datime_list):
 
             dof = dof_chi[echo]
             var = noise_chi[echo]
-            print(var)
-            print(dof)
-            ll_mtw = chi_ll(mtwom, mtwpm, float(dof[0]), float(var[0]), model=model, contrast = "mt")
-            ll_pdw = chi_ll(pdwom, pdwpm, float(dof[1]), float(var[1]), model=model, contrast = "pd")
-            ll_t1w = chi_ll(t1wom, t1wpm, float(dof[2]), float(var[2]), model=model, contrast = "t1")
+            if model=="chi":
+                    msk_check_mt = torch.isfinite(mtwom) & torch.isfinite(mtwom) & (mtwpm > 0) & (mtwpm > 0)
+                    mtwom[~msk_check_mt] = 0.
+                    mtwpm[~msk_check_mt] = 0.
+                    msk_check_pd = torch.isfinite(pdwom) & torch.isfinite(pdwom) & (pdwpm > 0) & (pdwpm > 0)
+                    pdwom[~msk_check_pd] = 0.
+                    pdwpm[~msk_check_pd] = 0.
+                    msk_check_t1 = torch.isfinite(t1wom) & torch.isfinite(t1wom) & (t1wpm > 0) & (t1wpm > 0)
+                    t1wom[~msk_check_t1] = 0.
+                    t1wpm[~msk_check_t1] = 0.
+            ll_mtw = chi_ll(mtwom, mtwpm, float(dof[0]), float(var[0]), model=model, contrast = "mt", ll_save = ll_save, msk_check = msk_check_mt)
+            ll_pdw = chi_ll(pdwom, pdwpm, float(dof[1]), float(var[1]), model=model, contrast = "pd", ll_save = ll_save, msk_check = msk_check_pd)
+            ll_t1w = chi_ll(t1wom, t1wpm, float(dof[2]), float(var[2]), model=model, contrast = "t1", ll_save = ll_save, msk_check = msk_check_t1)
 
             # save likelihood values to the file
             like_text = f"log likeihood MT contrast with {model} model: {ll_mtw}\nlog likeihood PD contrast with {model} model: {ll_pdw}\nlog likeihood T1 contrast with {model} model: {ll_t1w}\n"
