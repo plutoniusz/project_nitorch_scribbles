@@ -27,7 +27,7 @@ cl_list = ['MPM']
 #datime_now = '2022-05-13_16-08-18'
 #datime_now = "2022-05-17_14-58-44"
 #datime_now = '2022-05-25_15-21-57'
-datime_now = '2022-06-08_10-49-55'
+datime_now = '2022-06-08_12-39-53'
     
 for index, datime in enumerate(datime_list):
     likelihoods = "likelihoods_" + datime + datime_now + ".txt"

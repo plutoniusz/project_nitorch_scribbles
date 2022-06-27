@@ -30,8 +30,7 @@ def chi_ll(dat, pred, dof, var, model='chi', contrast = "mt", ll_save = False, m
                 - 0.5 * rec_var * (pred[msk_check].square() + dat[msk_check].square())
                 + besseli(dof/2.-1., z[msk_check], 'log')
                 - log(var))
-            print(os.path.join(cwd, save_folder+'/masked/ll_chi'+str(echo)+ contrast + '.nii'))
-            savef(-ll, os.path.join(cwd, save_folder+'/masked/ll_chi'+str(echo)+ contrast + '.nii'), affine = mtwp.affine)
+            savef(ll, os.path.join(cwd, save_folder+'/masked/ll_chi'+str(echo)+ contrast + '.nii'), affine = t1wp.affine)
         else:
             z = (dat[msk_check]*pred[msk_check]*rec_var)
             ll = ((1.-dof/2.) * (pred[msk_check].log())
@@ -50,8 +49,7 @@ def chi_ll(dat, pred, dof, var, model='chi', contrast = "mt", ll_save = False, m
             ll = torch.zeros(s, dtype=torch.double)
             res[msk_check] = pred[msk_check].neg_().add_(dat[msk_check])
             ll[msk_check] = - (0.5 * rec_var * res[msk_check].square() + 0.5*log(2.*pi*var))
-            print(os.path.join(cwd, save_folder+'/masked/ll_gauss'+str(echo)+ contrast + '.nii'))
-            savef(-ll, os.path.join(cwd, save_folder+'/masked/ll_gauss'+str(echo)+ contrast + '.nii'), affine = mtwp.affine)
+            savef(ll, os.path.join(cwd, save_folder+'/masked/ll_gauss'+str(echo)+ contrast + '.nii'), affine = t1wp.affine)
         else:
             res = pred[msk_check].neg_().add_(dat[msk_check])
             ll = - (0.5 * rec_var * res.square() + 0.5*log(2.*pi*var))
@@ -66,9 +64,9 @@ mask_im = False
 mask_save = True
 models = ["chi", "gauss"]
 echos = [0,1,2,3,4,5]
-#echos = [0,1]
+echos = [0]
 # estimation date
-datime_list = ['2022-06-13_20-17-27']
+datime_list = ['2022-06-24_01-07-15']
 # validation date
 datime_val =  datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 # dataset choice
@@ -225,42 +223,44 @@ for index, datime in enumerate(datime_list):
                 brain_mask = qio.GradientEchoSingle(mask)
                 brain_mask_affine =brain_mask.affine
                 brain_mask = brain_mask.fdata(dtype=torch.double)
-                msk = torch.isfinite(brain_mask)
-                size_mask= torch.sum(msk)
+                brain_mask = torch.where(brain_mask > 0.5, torch.tensor(1., dtype=torch.double), torch.tensor(0., dtype=torch.double))
 
                 mat = lmdiv(brain_mask_affine, mtwp.affine)
                 grid = smart_grid(mat, mtwp.shape, brain_mask.shape)
                 brain_mask_mtp = smart_pull(brain_mask, grid)
-                mtp_msk = torch.gt(brain_mask_mtp, 0.5)
-                brain_mask_mtp[mtp_msk] = 1.
-                brain_mask_mtp[~mtp_msk] = 0.
+                brain_mask_mtp = torch.where(brain_mask_mtp > 0.5, torch.tensor(1., dtype=torch.double), torch.tensor(0., dtype=torch.double))                
 
                 mat = lmdiv(brain_mask_affine, pdwp.affine)
                 grid = smart_grid(mat, pdwp.shape, brain_mask.shape)
                 brain_mask_pdp = smart_pull(brain_mask, grid)
-                pdp_msk = torch.gt(brain_mask_pdp, 0.5)
-                brain_mask_pdp[pdp_msk] = 1.
-                brain_mask_pdp[~pdp_msk] = 0.
+                brain_mask_pdp = torch.where(brain_mask_pdp > 0.5, torch.tensor(1., dtype=torch.double), torch.tensor(0., dtype=torch.double))
 
                 mat = lmdiv(brain_mask_affine, t1wp.affine)
                 grid = smart_grid(mat, t1wp.shape, brain_mask.shape)
                 brain_mask_t1p = smart_pull(brain_mask, grid)
-                t1p_msk = torch.gt(brain_mask_t1p, 0.5)
-                brain_mask_t1p[t1p_msk] = 1.
-                brain_mask_t1p[~t1p_msk] = 0.
-
-                savef(brain_mask_mtp, os.path.join(cwd, save_folder+'/mask_processed_mtp.nii'), affine = brain_mask_affine)
-                savef(brain_mask_pdp, os.path.join(cwd, save_folder+'/mask_processed_pdp.nii'), affine = brain_mask_affine)
-                savef(brain_mask_t1p, os.path.join(cwd, save_folder+'/mask_processed_t1p.nii'), affine = brain_mask_affine)
+                brain_mask_t1p = torch.where(brain_mask_t1p > 0.5, torch.tensor(1., dtype=torch.double), torch.tensor(0., dtype=torch.double))
 
                 # multiply mask by predicted image
-                mtwpm = mtwp.fdata()*brain_mask_mtp
-                pdwpm = pdwp.fdata()*brain_mask_pdp
-                t1wpm = t1wp.fdata()*brain_mask_t1p
+                mtwpm = mtwp.fdata(dtype=torch.double)*brain_mask_mtp
+                pdwpm = pdwp.fdata(dtype=torch.double)*brain_mask_pdp
+                t1wpm = t1wp.fdata(dtype=torch.double)*brain_mask_t1p
 
                 # save masked predicted images
                 pm_path = Path(save_folder + '/masked').mkdir(parents=True, exist_ok=True)
                 if mask_save:
+                    savef(brain_mask, os.path.join(cwd, save_folder+'/mask_processed.nii'), affine = brain_mask_affine)
+
+                    savef(brain_mask_mtp, os.path.join(cwd, save_folder+'/mask_processed_mtp.nii'), affine = brain_mask_affine)
+                    savef(brain_mask_pdp, os.path.join(cwd, save_folder+'/mask_processed_pdp.nii'), affine = brain_mask_affine)
+                    savef(brain_mask_t1p, os.path.join(cwd, save_folder+'/mask_processed_t1p.nii'), affine = brain_mask_affine)
+                    
+                    mtwpd = mtwp.fdata(dtype=torch.double)-mtwpm
+                    pdwpd = pdwp.fdata(dtype=torch.double)-pdwpm
+                    t1wpd = t1wp.fdata(dtype=torch.double)-t1wpm
+                    savef(mtwpd, os.path.join(cwd, save_folder+'/difference.nii'), affine = brain_mask_affine)
+                    savef(pdwpd, os.path.join(cwd, save_folder+'/difference.nii'), affine = brain_mask_affine)
+                    savef(t1wpd, os.path.join(cwd, save_folder+'/difference.nii'), affine = brain_mask_affine)
+
                     savef(mtwpm, os.path.join(cwd, save_folder+'/masked/mtwp'+str(echo)+'.nii'), affine = mtwp.affine)
                     savef(pdwpm, os.path.join(cwd, save_folder+'/masked/pdwp'+str(echo)+'.nii'), affine = pdwp.affine)
                     savef(t1wpm, os.path.join(cwd, save_folder+'/masked/t1wp'+str(echo)+'.nii'), affine = t1wp.affine)
@@ -276,26 +276,17 @@ for index, datime in enumerate(datime_list):
                     mat = lmdiv(brain_mask_affine, mtwo.affine)
                     grid = smart_grid(mat, mtwo.shape, brain_mask.shape)
                     brain_mask_mt = smart_pull(brain_mask, grid)
-                    mt_msk = torch.gt(brain_mask_mt, 0.5)
-                    brain_mask_mt[mt_msk] = 1.
-                    brain_mask_mt[~mt_msk] = 0.
-                    savef(brain_mask_mt, os.path.join(cwd, save_folder+'/mask_processed_mt.nii'), affine = brain_mask_affine)
+                    brain_mask_mt = torch.where(brain_mask_mt > 0.5, torch.tensor(1., dtype=torch.double), torch.tensor(0., dtype=torch.double))
 
                     mat = lmdiv(brain_mask_affine, pdwo.affine)
                     grid = smart_grid(mat, pdwo.shape, brain_mask.shape)
                     brain_mask_pd = smart_pull(brain_mask, grid)
-                    pd_msk = torch.gt(brain_mask_pd, 0.5)
-                    brain_mask_pd[pd_msk] = 1.
-                    brain_mask_pd[~pd_msk] = 0.
-                    savef(brain_mask_pd, os.path.join(cwd, save_folder+'/mask_processed_pd.nii'), affine = brain_mask_affine)
+                    brain_mask_pd = torch.where(brain_mask_pd > 0.5, torch.tensor(1., dtype=torch.double), torch.tensor(0., dtype=torch.double))
 
                     mat = lmdiv(brain_mask_affine, t1wo.affine)
                     grid = smart_grid(mat, t1wo.shape, brain_mask.shape)
                     brain_mask_t1 = smart_pull(brain_mask, grid)
-                    t1_msk = torch.gt(brain_mask_t1, 0.5)
-                    brain_mask_t1[t1_msk] = 1.
-                    brain_mask_t1[~t1_msk] = 0.
-                    savef(brain_mask_t1, os.path.join(cwd, save_folder+'/mask_processed_t1.nii'), affine = brain_mask_affine)
+                    brain_mask_t1 = torch.where(brain_mask_t1 > 0.5, torch.tensor(1., dtype=torch.double), torch.tensor(0., dtype=torch.double))
 
                     # multiply mask by observed image
                     mtwom = mtwo.fdata()*brain_mask_mt
@@ -303,6 +294,10 @@ for index, datime in enumerate(datime_list):
                     t1wom = t1wo.fdata()*brain_mask_t1
 
                     if mask_save:
+                        savef(brain_mask_mt, os.path.join(cwd, save_folder+'/mask_processed_mt.nii'), affine = brain_mask_affine)
+                        savef(brain_mask_pd, os.path.join(cwd, save_folder+'/mask_processed_pd.nii'), affine = brain_mask_affine)
+                        savef(brain_mask_t1, os.path.join(cwd, save_folder+'/mask_processed_t1.nii'), affine = brain_mask_affine)
+
                         # save masked observed images
                         savef(mtwom, os.path.join(cwd, save_folder+'/masked/mtwo'+str(echo)+'.nii'), affine = mtwo.affine)
                         savef(pdwom, os.path.join(cwd, save_folder+'/masked/pdwo'+str(echo)+'.nii'), affine = pdwo.affine)
@@ -315,15 +310,17 @@ for index, datime in enumerate(datime_list):
             dof = dof_chi[echo]
             var = noise_chi[echo]
             if model=="chi":
-                    msk_check_mt = torch.isfinite(mtwom) & torch.isfinite(mtwom) & (mtwpm > 0) & (mtwpm > 0)
-                    mtwom[~msk_check_mt] = 0.
-                    mtwpm[~msk_check_mt] = 0.
-                    msk_check_pd = torch.isfinite(pdwom) & torch.isfinite(pdwom) & (pdwpm > 0) & (pdwpm > 0)
-                    pdwom[~msk_check_pd] = 0.
-                    pdwpm[~msk_check_pd] = 0.
-                    msk_check_t1 = torch.isfinite(t1wom) & torch.isfinite(t1wom) & (t1wpm > 0) & (t1wpm > 0)
-                    t1wom[~msk_check_t1] = 0.
-                    t1wpm[~msk_check_t1] = 0.
+                tiny = torch.tensor(1e-32, dtype=torch.double)
+                msk_check_mt = torch.isfinite(mtwom) & torch.isfinite(mtwom) & (mtwpm > tiny) & (mtwpm > tiny)
+                mtwom[~msk_check_mt] = 0.
+                mtwpm[~msk_check_mt] = 0.
+                msk_check_pd = torch.isfinite(pdwom) & torch.isfinite(pdwom) & (pdwpm > tiny) & (pdwpm > tiny)
+                pdwom[~msk_check_pd] = 0.
+                pdwpm[~msk_check_pd] = 0.
+                msk_check_t1 = torch.isfinite(t1wom) & torch.isfinite(t1wom) & (t1wpm > tiny) & (t1wpm > tiny)
+                t1wom[~msk_check_t1] = 0.
+                t1wpm[~msk_check_t1] = 0.
+            pm_path = Path(save_folder + '/masked').mkdir(parents=True, exist_ok=True)
             ll_mtw = chi_ll(mtwom, mtwpm, float(dof[0]), float(var[0]), model=model, contrast = "mt", ll_save = ll_save, msk_check = msk_check_mt)
             ll_pdw = chi_ll(pdwom, pdwpm, float(dof[1]), float(var[1]), model=model, contrast = "pd", ll_save = ll_save, msk_check = msk_check_pd)
             ll_t1w = chi_ll(t1wom, t1wpm, float(dof[2]), float(var[2]), model=model, contrast = "t1", ll_save = ll_save, msk_check = msk_check_t1)
