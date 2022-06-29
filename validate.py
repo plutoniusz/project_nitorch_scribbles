@@ -18,7 +18,6 @@ def chi_ll(dat, pred, dof, var, model='chi', msk_calc = False, ll_save = False, 
 
     """
     rec_var = 1./var
-
     if model == 'chi':
         if ll_save:
             s = dat.size()
@@ -34,7 +33,7 @@ def chi_ll(dat, pred, dof, var, model='chi', msk_calc = False, ll_save = False, 
         else:
             z = (dat[msk_calc]*pred[msk_calc]*rec_var)
             ll = ((1.-dof/2.) * (pred[msk_calc].log())
-                    + (dof/2.) *(dat[msk_calc].log())
+                    + (dof/2.) * (dat[msk_calc].log())
                     - 0.5 * rec_var * (pred[msk_calc].square() + dat[msk_calc].square())
                     + besseli(dof/2.-1., z, 'log')
                     - log(var))
@@ -47,13 +46,13 @@ def chi_ll(dat, pred, dof, var, model='chi', msk_calc = False, ll_save = False, 
             s = dat.size()
             res = torch.zeros(s, dtype=torch.double)
             ll = torch.zeros(s, dtype=torch.double)
-            res[msk_calc] = pred[msk_calc].neg_().add_(dat[msk_calc])
+            res[msk_calc] = pred[msk_calc].neg().add(dat[msk_calc])
             ll[msk_calc] = - (0.5 * rec_var * res[msk_calc].square() + 0.5*log(2.*pi*var))
             savef(ll, os.path.join(cwd, save_folder+'/masked/ll_gauss'+str(echo)+ contrast + '.nii'), affine = affine)
         else:
-            res = pred[msk_calc].neg_().add_(dat[msk_calc])
+            res = pred[msk_calc].neg().add(dat[msk_calc])
             ll = - (0.5 * rec_var * res.square() + 0.5*log(2.*pi*var))
-    ll = torch.sum(ll, dtype=torch.double) 
+    ll = torch.sum(ll[msk_calc], dtype=torch.double) 
     return ll
 
 ##########################
@@ -68,6 +67,7 @@ echos = [0,1,2,3,4,5]
 echos = [0]
 # estimation date
 datime_list = ['2022-06-24_01-07-15']
+datime_list = ['2022-06-28_01-56-39']
 # validation date
 datime_val =  datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 # dataset choice
@@ -194,19 +194,11 @@ for index, datime in enumerate(datime_list):
                     brain_mask_obs = torch.where(brain_mask_obs > 0.5, torch.tensor(1., dtype=torch.double), torch.tensor(0., dtype=torch.double))                
 
                     observed = observed.fdata(dtype=torch.double)*brain_mask_obs
-
-                    # resample mask on predicted image
-                    mat = lmdiv(brain_mask_affine, predicted.affine)
-                    grid = smart_grid(mat, predicted.shape, brain_mask.shape)
-                    brain_mask_pred = smart_pull(brain_mask, grid)
-                    brain_mask_pred = torch.where(brain_mask_pred > 0.5, torch.tensor(1., dtype=torch.double), torch.tensor(0., dtype=torch.double))                
-
                     predicted_affine = predicted.affine
-                    predicted = predicted.fdata(dtype=torch.double)*brain_mask_pred
+                    predicted = predicted.fdata(dtype=torch.double)*brain_mask_obs
 
                     if mask_save:
                         savef(brain_mask_obs, os.path.join(cwd, save_folder+'/mask_processed_' +  contrast + '_obs.nii'), affine = brain_mask_affine)
-                        savef(brain_mask_pred, os.path.join(cwd, save_folder+'/mask_processed_' +  contrast + '_pred.nii'), affine = brain_mask_affine)
                         savef(observed, os.path.join(cwd, save_folder+'/masked/' + contrast + "_obs_mask" +str(echo)+'.nii'), affine = observed_affine)
                         savef(predicted, os.path.join(cwd, save_folder+'/masked/' + contrast + "_pred_mask" +str(echo)+'.nii'), affine = predicted_affine)
                 else:
@@ -214,15 +206,13 @@ for index, datime in enumerate(datime_list):
                     predicted = predicted.fdata(dtype=torch.double)
 
                 if model=="chi":
-                    tiny = torch.tensor(1e-32, dtype=torch.double)
+                    tiny = torch.tensor(1e-64, dtype=torch.double)
                     msk_calc = torch.isfinite(observed) & torch.isfinite(predicted) & (observed > tiny) & (predicted > tiny)
-                    observed[~msk_calc] = 0.
-                    predicted[~msk_calc] = 0.
                 # folder for saving log-likelihood maps
                 pm_path = Path(save_folder + '/masked').mkdir(parents=True, exist_ok=True)
                 ll = chi_ll(observed, predicted, float(dof[echo][contrast_number]), float(var[echo][contrast_number]), model=model, msk_calc = msk_calc, ll_save = ll_save, contrast = contrast, affine = observed_affine)
 
                 # save likelihood values to the file
-                like_text = f"log likeihood {contrast} contrast with {model} model: {ll}\n"
+                like_text = f"log likelihood {contrast} contrast with {model} model: {ll}\n"
                 with open(save_folder + '/likelihoods_' + datime + "_" + datime_val + '.txt', 'a') as f:
                     f.write(like_text)
