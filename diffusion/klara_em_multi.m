@@ -9,104 +9,46 @@
 % r - responsibilities kxn
 
 if true
-    K = 10;
-
-    path_list = [ "/data/underworld/kbas/03_data/derivatives/112111/20191115/dwi/fsl-probtrackx-2/fdt_matrix2.dot";
-        "/data/underworld/kbas/03_data/derivatives/128221/20190920/dwi/fsl-probtrackx-2/fdt_matrix2.dot";
-        "/data/underworld/kbas/03_data/derivatives/130519/20191115/dwi/fsl-probtrackx-2/fdt_matrix2.dot";
-        "/data/underworld/kbas/03_data/derivatives/170192/20190111/dwi/fsl-probtrackx-2/fdt_matrix2.dot";
-        "/data/underworld/kbas/03_data/derivatives/176117/20190222/dwi/fsl-probtrackx-2/fdt_matrix2.dot";
-        "/data/underworld/kbas/03_data/derivatives/208010/20200110/dwi/fsl-probtrackx-2/fdt_matrix2.dot"; 
-        "/data/underworld/kbas/03_data/derivatives/210022/20190621/dwi/fsl-probtrackx-2/fdt_matrix2.dot";
-        "/data/underworld/kbas/03_data/derivatives/211787/20191011/dwi/fsl-probtrackx-2/fdt_matrix2.dot";
-        "/data/underworld/kbas/03_data/derivatives/214685/20201204/dwi/fsl-probtrackx-2/fdt_matrix2.dot";
-        "/data/underworld/kbas/03_data/derivatives/232237/20191018/dwi/fsl-probtrackx-2/fdt_matrix2.dot";
-        "/data/underworld/kbas/03_data/derivatives/308597/20191129/dwi/fsl-probtrackx-2/fdt_matrix2.dot";
-        "/data/underworld/kbas/03_data/derivatives/324038/20191213/dwi/fsl-probtrackx-2/fdt_matrix2.dot";
-        "/data/underworld/kbas/03_data/derivatives/330406/20191122/dwi/fsl-probtrackx-2/fdt_matrix2.dot";
-        "/data/underworld/kbas/03_data/derivatives/346878/20190531/dwi/fsl-probtrackx-2/fdt_matrix2.dot"];
-
-%     def_list = ["/data/underworld/kbas/03_data/processed/y_1_00001_sub-112111_ses-20191115_space-orig_desc-dwi-skullstripped_b0_mb.nii";
-%         "/data/underworld/kbas/03_data/processed/y_1_00002_sub-128221_ses-20190920_space-orig_desc-dwi-skullstripped_b0_mb.nii";
-%         "/data/underworld/kbas/03_data/processed/y_1_00003_sub-130519_ses-20191115_space-orig_desc-dwi-skullstripped_b0_mb.nii";
-%         "/data/underworld/kbas/03_data/processed/y_1_00004_sub-170192_ses-20190111_space-orig_desc-dwi-skullstripped_b0_mb.nii";
-%         "/data/underworld/kbas/03_data/processed/y_1_00005_sub-176117_ses-20190222_space-orig_desc-dwi-skullstripped_b0_mb.nii";
-%         "/data/underworld/kbas/03_data/processed/y_1_00006_sub-208010_ses-20200110_space-orig_desc-dwi-skullstripped_b0_mb.nii";
-%         "/data/underworld/kbas/03_data/processed/y_1_00007_sub-210022_ses-20190621_space-orig_desc-dwi-skullstripped_b0_mb.nii";
-%         "/data/underworld/kbas/03_data/processed/y_1_00008_sub-211787_ses-20191011_space-orig_desc-dwi-skullstripped_b0_mb.nii";
-%         "/data/underworld/kbas/03_data/processed/y_1_00009_sub-214685_ses-20201204_space-orig_desc-dwi-skullstripped_b0_mb.nii";
-%         "/data/underworld/kbas/03_data/processed/y_1_00010_sub-232237_ses-20191018_space-orig_desc-dwi-skullstripped_b0_mb.nii";
-%         "/data/underworld/kbas/03_data/processed/y_1_00011_sub-308597_ses-20191129_space-orig_desc-dwi-skullstripped_b0_mb.nii";
-%         "/data/underworld/kbas/03_data/processed/y_1_00012_sub-324038_ses-20191213_space-orig_desc-dwi-skullstripped_b0_mb.nii";
-%         "/data/underworld/kbas/03_data/processed/y_1_00013_sub-330406_ses-20191122_space-orig_desc-dwi-skullstripped_b0_mb.nii";
-%         "/data/underworld/kbas/03_data/processed/y_1_00014_sub-346878_ses-20190531_space-orig_desc-dwi-skullstripped_b0_mb.nii"];
-
-    def_list = ["/data/underworld/kbas/03_data/processed/test_mb/y_resliced_deformation112111.nii";
-        "/data/underworld/kbas/03_data/processed/test_mb/y_resliced_deformation128221.nii";
-        "/data/underworld/kbas/03_data/processed/test_mb/y_resliced_deformation130519.nii";
-        "/data/underworld/kbas/03_data/processed/test_mb/y_resliced_deformation170192.nii";
-        "/data/underworld/kbas/03_data/processed/test_mb/y_resliced_deformation176117.nii";
-        "/data/underworld/kbas/03_data/processed/test_mb/y_resliced_deformation208010.nii";
-        "/data/underworld/kbas/03_data/processed/test_mb/y_resliced_deformation210022.nii";
-        "/data/underworld/kbas/03_data/processed/test_mb/y_resliced_deformation211787.nii";
-        "/data/underworld/kbas/03_data/processed/test_mb/y_resliced_deformation214685.nii";
-        "/data/underworld/kbas/03_data/processed/test_mb/y_resliced_deformation232237.nii";
-        "/data/underworld/kbas/03_data/processed/test_mb/y_resliced_deformation308597.nii";
-        "/data/underworld/kbas/03_data/processed/test_mb/y_resliced_deformation324038.nii";
-        "/data/underworld/kbas/03_data/processed/test_mb/y_resliced_deformation330406.nii";
-        "/data/underworld/kbas/03_data/processed/test_mb/y_resliced_deformation346878.nii"];
-
-    b0_list = ["/data/underworld/kbas/03_data/derivatives/112111/20191115/dwi/qmap-preproc-b0/sub-112111_ses-20191115_space-orig_desc-dwi-skullstripped_b0.nii";
-        "/data/underworld/kbas/03_data/derivatives/128221/20190920/dwi/qmap-preproc-b0/sub-128221_ses-20190920_space-orig_desc-dwi-skullstripped_b0.nii";
-        "/data/underworld/kbas/03_data/derivatives/130519/20191115/dwi/qmap-preproc-b0/sub-130519_ses-20191115_space-orig_desc-dwi-skullstripped_b0.nii";
-        "/data/underworld/kbas/03_data/derivatives/170192/20190111/dwi/qmap-preproc-b0/sub-170192_ses-20190111_space-orig_desc-dwi-skullstripped_b0.nii";
-        "/data/underworld/kbas/03_data/derivatives/176117/20190222/dwi/qmap-preproc-b0/sub-176117_ses-20190222_space-orig_desc-dwi-skullstripped_b0.nii";
-        "/data/underworld/kbas/03_data/derivatives/208010/20200110/dwi/qmap-preproc-b0/sub-208010_ses-20200110_space-orig_desc-dwi-skullstripped_b0.nii";
-        "/data/underworld/kbas/03_data/derivatives/210022/20190621/dwi/qmap-preproc-b0/sub-210022_ses-20190621_space-orig_desc-dwi-skullstripped_b0.nii";
-        "/data/underworld/kbas/03_data/derivatives/211787/20191011/dwi/qmap-preproc-b0/sub-211787_ses-20191011_space-orig_desc-dwi-skullstripped_b0.nii";
-        "/data/underworld/kbas/03_data/derivatives/214685/20201204/dwi/qmap-preproc-b0/sub-214685_ses-20201204_space-orig_desc-dwi-skullstripped_b0.nii";
-        "/data/underworld/kbas/03_data/derivatives/232237/20191018/dwi/qmap-preproc-b0/sub-232237_ses-20191018_space-orig_desc-dwi-skullstripped_b0.nii";
-        "/data/underworld/kbas/03_data/derivatives/308597/20191129/dwi/qmap-preproc-b0/sub-308597_ses-20191129_space-orig_desc-dwi-skullstripped_b0.nii";
-        "/data/underworld/kbas/03_data/derivatives/324038/20191213/dwi/qmap-preproc-b0/sub-324038_ses-20191213_space-orig_desc-dwi-skullstripped_b0.nii";
-        "/data/underworld/kbas/03_data/derivatives/330406/20191122/dwi/qmap-preproc-b0/sub-330406_ses-20191122_space-orig_desc-dwi-skullstripped_b0.nii";
-        "/data/underworld/kbas/03_data/derivatives/346878/20190531/dwi/qmap-preproc-b0/sub-346878_ses-20190531_space-orig_desc-dwi-skullstripped_b0.nii"];
-
-        gen_list = [ "/data/underworld/kbas/03_data/derivatives/112111/20191115/dwi/fsl-probtrackx-2";
-        "/data/underworld/kbas/03_data/derivatives/128221/20190920/dwi/fsl-probtrackx-2";
-        "/data/underworld/kbas/03_data/derivatives/130519/20191115/dwi/fsl-probtrackx-2";
-        "/data/underworld/kbas/03_data/derivatives/170192/20190111/dwi/fsl-probtrackx-2";
-        "/data/underworld/kbas/03_data/derivatives/176117/20190222/dwi/fsl-probtrackx-2";
-        "/data/underworld/kbas/03_data/derivatives/208010/20200110/dwi/fsl-probtrackx-2"; 
-        "/data/underworld/kbas/03_data/derivatives/210022/20190621/dwi/fsl-probtrackx-2";
-        "/data/underworld/kbas/03_data/derivatives/211787/20191011/dwi/fsl-probtrackx-2";
-        "/data/underworld/kbas/03_data/derivatives/214685/20201204/dwi/fsl-probtrackx-2";
-        "/data/underworld/kbas/03_data/derivatives/232237/20191018/dwi/fsl-probtrackx-2";
-        "/data/underworld/kbas/03_data/derivatives/308597/20191129/dwi/fsl-probtrackx-2";
-        "/data/underworld/kbas/03_data/derivatives/324038/20191213/dwi/fsl-probtrackx-2";
-        "/data/underworld/kbas/03_data/derivatives/330406/20191122/dwi/fsl-probtrackx-2";
-        "/data/underworld/kbas/03_data/derivatives/346878/20190531/dwi/fsl-probtrackx-2"];
+    subjects = [112111 128221 130519 170192 176117 208010 211787 214685 232237 308597 324038 330406 346878];
+    gen_path =  "/data/underworld/kbas/03_data";
+    sub_path = [];
+    for subject=subjects
+        directories = dir(gen_path + '/derivatives/' + subject);
+        for i=1:numel(directories)
+            if contains(directories(i).name, '20')
+                sub_path = [sub_path; string(directories(i).name)];
+                break
+            end
+        end
+    end
+    gen_list = [];
+    path_list = [];
+    def_list = [];
+    b0_list = [];
+    for i=1:numel(subjects)
+        path = strcat(gen_path, '/derivatives/', string(subjects(i)), '/', sub_path(i), '/dwi/fsl-probtrackx-2');
+        gen_list = [gen_list; path];
+        path = strcat(path, '/fdt_matrix2.dot');
+        path_list = [path_list; path];
+        path = strcat(gen_path, '/processed/', 'test_mb/y_resliced_deformation', string(subjects(i)), '.nii');
+        def_list = [def_list; path];
+        path = strcat(gen_path, '/derivatives/', string(subjects(i)), '/', sub_path(i), '/dwi/qmap-preproc-b0/sub-', string(subjects(i)), '_ses-', sub_path(i), '_space-orig_desc-dwi-skullstripped_b0.nii');
+        b0_list = [b0_list; path];        
+    end
 
     x_list = cell(14,1);
     whole_list = cell(14,1);
     phi_list = cell(14,1);
     addpath([getenv('FSLDIR') '/etc/matlab']);
-%     [mask,~,scales] = read_avw('/data/underworld/kbas/03_data/derivatives/112111/20191115/dwi/fsl-probtrackx-2/fdt_paths.nii.gz');
-%     mask = 0*mask;
-%     coord = load('/data/underworld/kbas/03_data/derivatives/112111/20191115/dwi/fsl-probtrackx-2/coords_for_fdt_matrix2')+1;
-%     ind   = sub2ind(size(mask),coord(:,1),coord(:,2),coord(:,3));
-% 
-%     coord_wb = load('/data/underworld/kbas/03_data/derivatives/112111/20191115/dwi/fsl-probtrackx-2/tract_space_coords_for_fdt_matrix2')+1;
-%     ind_wb = sub2ind(size(mask), coord_wb(:,1), coord_wb(:,2), coord_wb(:,3));
     
-    minimum_m = 1713600;
-    minimum_n = 1713600;
-    maximum_m = 1;
-    maximum_n = 1;
     figure;
-    for i=1:14
-        x = spconvert(load(path_list(i)));
-        [phi_list{i},dim1,dim2] = spm_def2sparse(num2str(def_list(i)), num2str(b0_list(i)));
-        [a1,a2] = size(phi_list{i});
+    ind_all = [];
+    ind_wb_all = [];
+    for i=1:13
+        x = spconvert(load(path_list(i)))';
+        %spy(x);
+        [phi_list{i},~,~] = spm_def2sparse(num2str(def_list(i)), num2str(b0_list(i)));
+        [a1,~] = size(phi_list{i});
 
         [mask,~,scales] = read_avw([gen_list{i} '/fdt_paths.nii.gz']);
         mask = 0*mask;
@@ -115,24 +57,24 @@ if true
         coord_wb = load([gen_list{i} '/tract_space_coords_for_fdt_matrix2'])+1;
         ind_wb = sub2ind(size(mask), coord_wb(:,1), coord_wb(:,2), coord_wb(:,3));
 
-        empty = sparse(a1, a1);
-        empty(ind, ind_wb) = x;
-        whole_list{i} = phi_list{i}'*empty*phi_list{i};
+        whole_list{i} = sparse(a1, a1);
+        whole_list{i}(ind_wb, ind) = x;
+        whole_list{i} = phi_list{i}'*whole_list{i}*phi_list{i};
 
         spy(whole_list{i});
         hold on;
         
         [a,b] = find(whole_list{i});
-        minimum_m = min(min(a), minimum_m);
-        maximum_m = max(max(a), maximum_m);
-        minimum_n = min(min(b), minimum_n);
-        maximum_n = max(max(b), maximum_n);
-        
+        ind_all = [ind_all; b];
+        ind_wb_all = [ind_wb_all; a];
+
     end
     hold off
+    ind_all = unique(ind_all);
+    ind_wb_all = unique (ind_wb_all);
     figure;
-    for i=1:14
-        x_list{i} = whole_list{i}(minimum_m:maximum_m, minimum_n:maximum_n);
+    for i=1:13
+        x_list{i} = whole_list{i}(ind_wb_all, ind_all);
         spy(x_list{i});
         hold on;
     end
@@ -149,17 +91,19 @@ else
     X  = multinom_random(P0*R0,1000);
 end
 
-X=x_list{1}';
-[M,N] = size(X);
+K = 10;
+[M,N] = size(x_list{i});
 P     = exp(randn(M,K)*0.01);
 P     = P./sum(P,1);
 g     = ones(K,1)/K;
 
-[P,g,R,ll] = em(X,P,g,1000);
+[P,g,R,ll] = em(x_list,P,g,2);
 
-for i=1:K
-    mask(ind) = full(R(i, :));
-    save_avw(mask, [gen_list '/clusters_test_' num2str(i)] ,'i',scales);
+for s=1:13
+    for i=1:K
+        mask(ind_all) = full(R{s}(i, :));
+        save_avw(mask, [gen_list{s} '/clusters_test_' num2str(s) '_' num2str(i)] ,'i',scales);
+    end
 end
 
 
@@ -181,34 +125,43 @@ function Z = multinom_random(P,Nsamp)
 end
 
 
-function [P,g,R,ll] = em(X,P,g,nit)
+function [P,g,R,ll] = em(x_list,P,g,nit)
     ll = -Inf;
     for iter= 1:nit
-        R     = e_step(X,P,g);
-        [P,g] = m_step(X,R);
+        r = 0;
+        xr = 0;
+        for i=1:13
+            R{i} = e_step(x_list{i},P,g);
+            xr = xr + x_list{i}*R{i}';
+            r = r + R{i};
+        end
+        [P,g] = m_step(xr,r);
         ll_o  = ll;
-        ll    = loglikelihood(X,P,g,R);
+        ll    = loglikelihood(x_list,P,g,R)
         if abs(ll-ll_o) < abs(ll*1e-9); break; end
     end
     %ll = ll + factorial_stuff(X);
 end
 
 
-function ll = loglikelihood(X,P,g,R)
-    ll = sum(LSE(log(P)'*X + log(g),1));
+function ll = loglikelihood(x_list,P,g,R)
+    ll = 0;
+    for i=1:13
+        ll = ll + sum(LSE((log(P)'*x_list{i} + log(g))'*R{i},1));
+    end
 end
 
 
 function R = e_step(X,P,g)
-    R = sparse(softmax(log(P)'*X + log(g),1));
+    R = sparse((softmax(log(P)'*X + log(g),1)));
 end
 
 
-function [P, g] = m_step(X,R)
+function [P, g] = m_step(xr,r)
     alpha0 = 1e-3; % Behaves like having a Dirichlet prior
-    P = X*R' + alpha0;
+    P = xr + alpha0;
     P = P./sum(P,1);
-    g = sum(R,2) + 1e-10; % To prevent numerical problems
+    g = r + 1e-10; % To prevent numerical problems
     g = g/sum(g);
 end
 
