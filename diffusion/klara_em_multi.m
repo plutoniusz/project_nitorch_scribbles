@@ -41,7 +41,7 @@ if true
     phi_list = cell(14,1);
     addpath([getenv('FSLDIR') '/etc/matlab']);
     
-    figure;
+    %figure;
     ind_all = [];
     ind_wb_all = [];
     for i=1:13
@@ -61,24 +61,24 @@ if true
         whole_list{i}(ind_wb, ind) = x;
         whole_list{i} = phi_list{i}'*whole_list{i}*phi_list{i};
 
-        spy(whole_list{i});
-        hold on;
+        %spy(whole_list{i});
+        %hold on;
         
         [a,b] = find(whole_list{i});
         ind_all = [ind_all; b];
         ind_wb_all = [ind_wb_all; a];
 
     end
-    hold off
+    %hold off
     ind_all = unique(ind_all);
     ind_wb_all = unique (ind_wb_all);
-    figure;
+    %figure;
     for i=1:13
         x_list{i} = whole_list{i}(ind_wb_all, ind_all);
-        spy(x_list{i});
-        hold on;
+        %spy(x_list{i});
+        %hold on;
     end
-    hold off
+    %hold off;
    
 
 else
@@ -94,8 +94,9 @@ end
 K = 10;
 [M,N] = size(x_list{i});
 P     = exp(randn(M,K)*0.01);
-P     = P./sum(P,1);
-g     = ones(K,1)/K;
+P     = log(P./sum(P,1));
+g     = log(ones(K,1)/K);
+
 
 [P,g,R,ll] = em(x_list,P,g,2);
 
@@ -140,29 +141,37 @@ function [P,g,R,ll] = em(x_list,P,g,nit)
         ll    = loglikelihood(x_list,P,g,R)
         if abs(ll-ll_o) < abs(ll*1e-9); break; end
     end
-    %ll = ll + factorial_stuff(X);
+    for i =1:13
+        ll = ll + factorial_stuff(x_list{i});
+    end
 end
 
 
 function ll = loglikelihood(x_list,P,g,R)
     ll = 0;
     for i=1:13
-        ll = ll + sum(LSE((log(P)'*x_list{i} + log(g))'*R{i},1));
+        ll = ll + sum(LSE((P'*x_list{i} + g)'*R{i},1),2);
+
     end
 end
 
 
-function R = e_step(X,P,g)
-    R = sparse((softmax(log(P)'*X + log(g),1)));
+function R = e_step(xs,P,g)
+    %R = (softmax(log(P)'*xs + log(g),1));
+    R = sparse(softmax(P'*xs + g,1));
 end
 
 
 function [P, g] = m_step(xr,r)
     alpha0 = 1e-3; % Behaves like having a Dirichlet prior
-    P = xr + alpha0;
-    P = P./sum(P,1);
-    g = r + 1e-10; % To prevent numerical problems
-    g = g/sum(g);
+    alpha = xr + alpha0;
+    P = psi(alpha) - psi(sum(alpha,1));
+    %P = P./sum(P,1); %dlaczego tak a nie *p(old)
+    %g = r + 1e-10; % To prevent numerical problems
+    beta0 = 1e-3;
+    beta = r + beta0;
+    %g = g/sum(g);
+    g = psi(beta)-psi(sum(beta,1));
 end
 
 
@@ -194,7 +203,7 @@ end
 
 function L = logfactorial(X)
     % log(X!)
-    L = gammaln(X+1);
+    L = gammaln(sparse(X)+1);
 end
 
 
