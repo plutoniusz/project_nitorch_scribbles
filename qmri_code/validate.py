@@ -1,3 +1,4 @@
+from cmath import nan
 from math import log
 import os
 from nitorch.io import savef
@@ -10,6 +11,7 @@ from nitorch.tools.qmri.relax.utils import smart_grid, smart_pull
 from pathlib import Path
 import re
 from datetime import datetime
+import numpy as np
 
 
 def chi_ll(dat, pred, dof, var, model='chi', msk_calc = False, ll_save = False, contrast = False, affine = False):
@@ -18,6 +20,7 @@ def chi_ll(dat, pred, dof, var, model='chi', msk_calc = False, ll_save = False, 
 
     """
     rec_var = 1./var
+
     if model == 'chi':
         if ll_save:
             s = dat.size()
@@ -29,11 +32,11 @@ def chi_ll(dat, pred, dof, var, model='chi', msk_calc = False, ll_save = False, 
                 - 0.5 * rec_var * (pred[msk_calc].square() + dat[msk_calc].square())
                 + besseli(dof/2.-1., z[msk_calc], 'log')
                 - log(var))
-            savef(ll, os.path.join(cwd, save_folder+'/masked/ll_chi'+str(echo)+ contrast + '.nii'), affine = affine)
+            savef(ll, os.path.join(cwd, save_folder+ masked_folder + '/ll_chi'+str(echo)+ contrast + '.nii'), affine = affine)
         else:
             z = (dat[msk_calc]*pred[msk_calc]*rec_var)
             ll = ((1.-dof/2.) * (pred[msk_calc].log())
-                    + (dof/2.) * (dat[msk_calc].log())
+                    + (dof/2.) *(dat[msk_calc].log())
                     - 0.5 * rec_var * (pred[msk_calc].square() + dat[msk_calc].square())
                     + besseli(dof/2.-1., z, 'log')
                     - log(var))
@@ -46,39 +49,61 @@ def chi_ll(dat, pred, dof, var, model='chi', msk_calc = False, ll_save = False, 
             s = dat.size()
             res = torch.zeros(s, dtype=torch.double)
             ll = torch.zeros(s, dtype=torch.double)
-            res[msk_calc] = pred[msk_calc].neg().add(dat[msk_calc])
+            res[msk_calc] = pred[msk_calc].neg_().add_(dat[msk_calc])
             ll[msk_calc] = - (0.5 * rec_var * res[msk_calc].square() + 0.5*log(2.*pi*var))
-            savef(ll, os.path.join(cwd, save_folder+'/masked/ll_gauss'+str(echo)+ contrast + '.nii'), affine = affine)
+            savef(ll, os.path.join(cwd, save_folder+ masked_folder + '/ll_gauss'+str(echo)+ contrast + '.nii'), affine = affine)
         else:
-            res = pred[msk_calc].neg().add(dat[msk_calc])
+            res = pred[msk_calc].neg_().add_(dat[msk_calc])
             ll = - (0.5 * rec_var * res.square() + 0.5*log(2.*pi*var))
-    ll = torch.sum(ll[msk_calc], dtype=torch.double) 
+    ll = torch.sum(ll, dtype=torch.double) 
     return ll
 
 ##########################
 ##########################
 
-ll_save = True
+# save log likelihood images?
+ll_save = False
+# mask images ? 
 mask_im = True
-mask_region = ['thalamus'] # ['thalamus', 'whole_brain', 'amygdala'] 
-mask_save = False
+# save masked images ?
+mask_save = True
+# mask thalamus instead of whole brain ?
+thalamus = False
+
+if thalamus:
+    masked_folder = "/masked_thalamus"
+elif mask_im:
+    masked_folder = "/masked"
+else :
+    masked_folder = "/ll"
+
 models = ["chi", "gauss"]
 contrasts = ["pd", "t1", "mt"]
 echos = [0,1,2,3,4,5]
+
 # estimation date
-datime_list = ['2022-07-04_14-36-07']
+datime_list = []
+for foldername in os.listdir(str('/data/underworld/kbas/project_nitorch_scribbles/qmri_results')):
+            if foldername.startswith("chi_results_leftout_2023-07-15"):
+                datime_list.append(str(foldername[20:]))
+
+
+print(datime_list)
+datime_list = datime_list[:]
 # validation date
 datime_val =  datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
 # dataset choice
-datasets = ['mpm'] #'mpm'/ 'cl'/ 'mc'
-cwd = os.getcwd()
+datasets = ['cl',] #'mpm'/ 'cl'/ 'mc'
+#cwd = os.getcwd()
+cwd = '/data/underworld/kbas/project_nitorch_scribbles/'
 
 
 if datasets == ['cl']:
     cl_list = ['112111', '115326', '116284', '128221', '130519', '133749', '170192', '176117',
-                '208010', '210022', '211787', '214685', '232237', '242234', '260478', '307789', '308597',
+                '208010', '210022', '211787', '214685', '232237', '242234', '260478', '308597',
                 '324038', '330406', '346878']
-    datasets = cl_list[:1] # chosing cl dataset indexes from the list
+    datasets = cl_list[:] # chosing cl dataset indexes from the list
+    print(datasets)
     cl = True
 else:
     cl = False
@@ -95,26 +120,25 @@ for index, datime in enumerate(datime_list):
                     os.path.join(cwd, '4John_Klara/pdw_mfc_3dflash_v1k_RR_0036'),
                     os.path.join(cwd, '4John_Klara/t1w_mfc_3dflash_v1k_RR_0034')]
     elif dataset == 'mpm':
-        pth_mris = [os.path.join(cwd, 'MPM/pdw_mfc_3dflash_v1i_R4_0009'), #pdw
-                    os.path.join(cwd, 'MPM/t1w_mfc_3dflash_v1i_R4_0015'),  #t1w
-                    os.path.join(cwd, 'MPM/mtw_mfc_3dflash_v1i_R4_0012')]   #mt
+        pth_mris = [os.path.join(cwd, 'MPM/mtw_mfc_3dflash_v1i_R4_0012'),
+                    os.path.join(cwd, 'MPM/pdw_mfc_3dflash_v1i_R4_0009'),
+                    os.path.join(cwd, 'MPM/t1w_mfc_3dflash_v1i_R4_0015')]
     elif cl:
-        #gen_path = "/data/underworld/01_DATA/00_ANALYSIS/02_KBAS/03_data/source/mri/"
-        gen_path = "/data/underworld/kbas/03_data/source/mri/"
+        gen_path = "/data/underworld/kbas/03_data/source_qmri_pd_2/mri/"
         path_dataset = os.path.join(gen_path, dataset)
         path_scans = os.listdir(path_dataset)
         path_scans = os.path.join(path_dataset, path_scans[0])
-        pth_mris = [os.path.join(path_scans, "16"), #mtw
-                    os.path.join(path_scans, "13"), #pdw
-                    os.path.join(path_scans, "10")] #t1w
+        pth_mris = [os.path.join(path_scans, "13"), #pdw
+                    os.path.join(path_scans, "10"), #t1w
+                    os.path.join(path_scans, "16")] #mtw
 
     # read noise estimates
     dof = []
     var = []
     noise_txt = 'noise_' + dataset + '_' + datime + '.txt'
-    with open(os.path.join('qmri_results/chi_results_leftout_'+ datime,  noise_txt)) as f:
+    with open(os.path.join(cwd, 'qmri_results/chi_results_leftout_'+ datime,  noise_txt)) as f:
         lines = f.readlines()
-    for i in range(echos[-1]+1):
+    for i in range(len(echos)):
         line = lines[i]
         line = line.replace('[', "")
         line = line.replace(']', "")
@@ -133,27 +157,25 @@ for index, datime in enumerate(datime_list):
             pth_mask = os.path.join(cwd, 'qmri_results/chi_results_leftout_'+ datime, mask_folder)
             pth_mask = os.path.join(cwd, "MPM")
         elif cl:
-            gen_path = "/data/underworld/kbas/03_data/derivatives/"
-            path_mask = os.path.join(gen_path, dataset)
-            path_pom = os.listdir(path_mask)
-            path_pom = [d for d in path_pom if os.path.isdir(os.path.join(path_mask, d))]
-            path_mask = os.path.join(path_mask, path_pom[0])
+            gen_path = "/data/underworld/kbas/03_data/processed_qmri_pd_2/"
+            pth_mask = os.path.join(gen_path, dataset)
+            #print(path_mask)
+            #path_pom = os.listdir(path_mask)
+            #print(path_pom)
+            #path_pom = [d for d in path_pom if os.path.isdir(os.path.join(path_mask, d))]
+            #print(path_pom)
+            #path_mask = os.path.join(path_mask, path_pom[0])
             #pth_mask = os.path.join(path_mask, "dwi/qmap-preproc-dwimask")
-            pth_mask = os.path.join(path_mask, "anat/spm-qmap-preproc")
+            #pth_mask = os.path.join(path_mask, "")
         for filename in os.listdir(str(pth_mask)):
-            if filename.endswith("brain_mask.nii"):
+            if thalamus & filename.endswith("thalamus_mask.nii"):
                 mask = (str(os.path.join(pth_mask, filename)))
-            elif filename.startswith("label_anon"):
+            # elif filename.endswith("brain_mask_spm_segment.nii"):
+            #     mask = (str(os.path.join(pth_mask, filename)))
+            elif filename.endswith("brain_mask.nii"):
                 mask = (str(os.path.join(pth_mask, filename)))
             else:
-                 continue
-        brain_mask = qio.GradientEchoSingle(mask)
-        brain_mask_affine =brain_mask.affine
-        brain_mask = brain_mask.fdata(dtype=torch.double)
-        # brain_mask = torch.where(brain_mask > 0.5, torch.tensor(1., dtype=torch.double), torch.tensor(0., dtype=torch.double)) #59 60
-        # brain_mask = torch.where((brain_mask == 31.)|(brain_mask == 32), torch.tensor(1., dtype=torch.double), torch.tensor(0., dtype=torch.double))
-        brain_mask = torch.where((brain_mask == 55.)|(brain_mask == 56), torch.tensor(1., dtype=torch.double), torch.tensor(0., dtype=torch.double))
-        # brain_mask = torch.where((brain_mask == 35), torch.tensor(1., dtype=torch.double), torch.tensor(0., dtype=torch.double))
+                continue
 
 
     for contrast_number,contrast in enumerate(contrasts):
@@ -168,8 +190,6 @@ for index, datime in enumerate(datime_list):
         for model in models:
             # folder with relevant images for the model
             save_folder = 'qmri_results/' + model + '_results_leftout_'+ datime
-            # folder for saving log-likelihood maps
-            pm_path = Path(save_folder + '/masked').mkdir(parents=True, exist_ok=True)
 
             # read predicted images
             predicted_folder = 'predicted'
@@ -180,6 +200,15 @@ for index, datime in enumerate(datime_list):
                     pred.append(str(os.path.join(pth_pred, filename)))
                 else:
                     continue
+            if mask_im:
+                # read the brain mask
+                brain_mask = qio.GradientEchoSingle(mask)
+                brain_mask_affine =brain_mask.affine
+                brain_mask = brain_mask.fdata(dtype=torch.double)
+                brain_mask = torch.where(brain_mask > 0.5, torch.tensor(1., dtype=torch.double), torch.tensor(0., dtype=torch.double))
+                if mask_save:
+                    pm_path = Path(cwd + save_folder + masked_folder).mkdir(parents=True, exist_ok=True)
+                    savef(brain_mask, os.path.join(cwd, save_folder+'/mask_processed.nii'), affine = brain_mask_affine)
 
             for echo in echos:
                 # read observed image
@@ -196,21 +225,35 @@ for index, datime in enumerate(datime_list):
                     brain_mask_obs = torch.where(brain_mask_obs > 0.5, torch.tensor(1., dtype=torch.double), torch.tensor(0., dtype=torch.double))                
 
                     observed = observed.fdata(dtype=torch.double)*brain_mask_obs
+
+                    # resample mask on predicted image
+                    mat = lmdiv(brain_mask_affine, predicted.affine)
+                    grid = smart_grid(mat, predicted.shape, brain_mask.shape)
+                    brain_mask_pred = smart_pull(brain_mask, grid)
+                    brain_mask_pred = torch.where(brain_mask_pred > 0.5, torch.tensor(1., dtype=torch.double), torch.tensor(0., dtype=torch.double))                
+
                     predicted_affine = predicted.affine
-                    predicted = predicted.fdata(dtype=torch.double)*brain_mask_obs
+                    predicted = predicted.fdata(dtype=torch.double)*brain_mask_pred
 
                     if mask_save:
-                        savef(brain_mask_obs, os.path.join(cwd, save_folder +'/masked' +'/mask_processed_' +  contrast + '_obs.nii'), affine = brain_mask_affine)
-                        savef(observed, os.path.join(cwd, save_folder +'/masked/' + contrast + "_obs_mask" +str(echo)+'.nii'), affine = observed_affine)
-                        savef(predicted, os.path.join(cwd, save_folder +'/masked/' + contrast + "_pred_mask" +str(echo)+'.nii'), affine = predicted_affine)
+                        savef(brain_mask_obs, os.path.join(cwd, save_folder+'/mask_processed_' +  contrast + '_obs.nii'), affine = brain_mask_affine)
+                        savef(brain_mask_pred, os.path.join(cwd, save_folder+'/mask_processed_' +  contrast + '_pred.nii'), affine = brain_mask_affine)
+                        savef(observed, os.path.join(cwd, save_folder+ masked_folder + '/' + contrast + "_obs_mask" +str(echo)+'.nii'), affine = observed_affine)
+                        savef(predicted, os.path.join(cwd, save_folder+ masked_folder + '/' + contrast + "_pred_mask" +str(echo)+'.nii'), affine = predicted_affine)
                 else:
                     observed = observed.fdata(dtype=torch.double)
                     predicted = predicted.fdata(dtype=torch.double)
 
-                msk_calc = torch.isfinite(observed) & torch.isfinite(predicted) & (observed > 0) & (predicted > 0)
+                if model=="chi":
+                    tiny = torch.tensor(1e-32, dtype=torch.double)
+                    msk_calc = torch.isfinite(observed) & torch.isfinite(predicted) & (observed > tiny) & (predicted > tiny)
+                    observed[~msk_calc] = 0.
+                    predicted[~msk_calc] = 0.
+                # folder for saving log-likelihood maps
+                pm_path = Path(cwd + save_folder + masked_folder).mkdir(parents=True, exist_ok=True)
                 ll = chi_ll(observed, predicted, float(dof[echo][contrast_number]), float(var[echo][contrast_number]), model=model, msk_calc = msk_calc, ll_save = ll_save, contrast = contrast, affine = observed_affine)
 
                 # save likelihood values to the file
-                like_text = f"log likelihood {contrast} contrast with {model} model: {ll}\n"
-                with open(save_folder + '/likelihoods_' + datime + "_" + datime_val + '.txt', 'a') as f:
+                like_text = f"log likeihood {contrast} contrast with {model} model: {ll}\n"
+                with open(cwd + save_folder + '/likelihoods_' + datime + "_" + datime_val + '.txt', 'a') as f:
                     f.write(like_text)

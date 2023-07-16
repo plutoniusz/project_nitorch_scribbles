@@ -10,18 +10,18 @@ from datetime import datetime
 
 # which echoes to estimate
 echos = [0, 1, 2, 3, 4, 5]
+echos = [0]
 models = ['chi', 'gauss']
-noise_model = ['chi', 'gauss']
+noise_model = ['chi', 'chi']
 contrasts = ["pd", "t1", "mt"] # order of contrasts
 penalty = dict(pd=10, r1=10, mt=5, r2s=5)
 # dataset choice
 datasets = ['cl'] #'mpm'/ 'cl'/ 'mc'
 cl = bool(datasets==["cl"])
 if cl:
-    datasets = ['112111', '115326', '116284', '128221', '130519', '133749', '170192', '176117',
-                '208010', '210022', '211787', '214685', '232237', '242234', '260478', '307789', '308597',
-                '324038', '330406', '346878']
-    datasets = datasets[3:4]
+    datasets = ['112111', '115326', '116284', '128221', '130519', '133749', '170192', '176117', '208010', '210022',
+     '211787', '214685', '232237', '242234', '260478', '308597', '324038', '330406', '346878']
+    datasets = datasets[:]
     print(datasets)
     
 # paths to the datasets
@@ -50,16 +50,14 @@ for dataset in datasets:
         for contrast_number,contrast in enumerate(contrasts):
             b1m_map[contrast_number] = str(os.path.join(cwd, "MPM/pdw_mfc_3dflash_v1i_R4_0009/Results/Supplementary/sensMap_HC_over_BC_division_" + contrast.upper() + ".nii"))
     elif cl:
-        #gen_path = "/data/underworld/01_DATA/00_ANALYSIS/02_KBAS/03_data/source/mri/"
-        gen_path = "/data/underworld/kbas/03_data/source_dif/mri/"
+        gen_path = "/data/underworld/kbas/03_data/source_qmri_pd_2/mri/"
         path_dataset = os.path.join(gen_path, dataset)
         path_scans = os.listdir(path_dataset)
         path_scans = os.path.join(path_dataset, path_scans[0])
         pth_mris = [os.path.join(path_scans, "13"), #pdw
                     os.path.join(path_scans, "10"), #t1w
                     os.path.join(path_scans, "16")] #mtw
-        #path_dataset = os.path.join("/data/underworld/01_DATA/00_ANALYSIS/02_KBAS/03_data/raw/", dataset)
-        path_dataset = os.path.join("/data/underworld/kbas/03_data/raw_dif", dataset)
+        path_dataset = os.path.join("/data/underworld/kbas/03_data/raw_qmri_pd_2", dataset)
         path_pom = os.listdir(path_dataset)
         path_dataset = os.path.join(path_dataset, path_pom[0])
         path_suppl = os.path.join(path_dataset, "anat/Results/Supplementary")
@@ -77,7 +75,7 @@ for dataset in datasets:
     for contrast_number, contrast in enumerate(contrasts):
         mris_pom = []
         for filename in os.listdir(str(pth_mris[contrast_number])):
-            if filename.endswith(".nii"):
+            if filename.endswith(".nii") & filename.startswith("sMP"):
                 mris_pom.append(str(os.path.join(pth_mris[contrast_number], filename)))
             else:
                 continue
@@ -111,7 +109,6 @@ for dataset in datasets:
         for contrast_number, contrast in enumerate(contrasts):
             # removing ech for validation
             mris_le[contrast_number] = mris[contrast_number][:echo] + mris[contrast_number][echo+1:]
-            #mris_le[contrast_number] = mris[contrast_number][:]
             mris_le[contrast_number] = qio.GradientEchoMulti.from_fnames(mris_le[contrast_number], mt=bool(contrast=="mt"))
 
         for model in models:
@@ -123,11 +120,11 @@ for dataset in datasets:
             opt = GREEQOptions()
             opt.recon.space = 1
             opt.backend.device = 'cuda'
-            opt.preproc.register = False #is this correct
+            opt.preproc.register = False
             opt.optim.nb_levels = 1
             opt.verbose = 1
             opt.likelihood = model
-            opt.noisemodel = model
+            opt.noisemodel = "chi"
             opt.penalty.factor = penalty
             print("start greeq")
             pd, r1, r2s, mt = greeq(mris_le, transmit = transmit, receive = receive, opt=opt)
@@ -145,7 +142,6 @@ for dataset in datasets:
                 f.write(noise_txt)
 
             # paths to paramter maps
-            #cwd = os.getcwd()
             mtp = os.path.join(cwd, save_folder + '/parameter_map' +'/mt'+str(echo)+'.nii')
             pdp = os.path.join(cwd, save_folder + '/parameter_map' +'/pd'+str(echo)+'.nii')
             r1p = os.path.join(cwd, save_folder + '/parameter_map' +'/r1'+str(echo)+'.nii')
